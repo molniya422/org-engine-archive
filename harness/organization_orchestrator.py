@@ -244,6 +244,68 @@ def validate_sendback_triple(sendback: dict) -> None:
 # Organization tree
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Accountability + skill-manifest (追责制 + skill 强制化)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class SkillManifest:
+    """Evidence that an executor actually invoked its bound skill.
+
+    The kernel cannot intercept the raw agent() call Workflow makes (it is not
+    in that call chain). So enforcement is at the GATE: a product key is only
+    issued when the manifest's `skill_used` equals the executor's bound skill
+    AND `evidence` is non-empty (proof the skill was read/used). Without a
+    compliant manifest, audit_accountability() rejects and the product is
+    treated as not-done. This is mechanism-level (拒绝签发), not a runtime
+    intercept and not a prompt 'SHOULD'.
+    """
+    skill_used: str
+    evidence: str          # proof: skill file path / ref applied, or what the skill mandated
+    product_ref: str       # the artifact this manifest vouches for
+
+    def is_compliant(self, bound_skill: str | None) -> bool:
+        if not bound_skill:
+            return False
+        if self.skill_used != bound_skill:
+            return False
+        if not self.evidence or not self.evidence.strip():
+            return False
+        return True
+
+
+@dataclass
+class Accountability:
+    """追责条目:每个节点向上汇报时必须带'我干了什么/怎么干的/依据什么'.
+
+    链式溯源(delegated_to / delegated_by)让从顶向下的追责成为一次 DFS:
+    项目 -> 主管 -> 执行者, 沿链可钻到具体某执行者的 did/how/evidence.
+    """
+    did: str               # 干了什么 (具体产出/操作)
+    how: str               # 怎么做的 (依据哪条契约/哪个子节点/哪个skill)
+    evidence: str = ""     # 可核验依据 (产物key/日志引用/skill manifest)
+    delegated_to: list = field(default_factory=list)   # 下游节点id, 向下追责链
+    delegated_by: str | None = None                    # 上游节点id, 溯源链
+    skill_manifest: SkillManifest | None = None        # 执行者专属: skill强制凭证
+    audit_status: str = "pending"   # pending|approved|rejected
+    audit_reason: str = ""
+
+    def to_dict(self) -> dict:
+        m = None
+        if self.skill_manifest is not None:
+            m = {"skill_used": self.skill_manifest.skill_used,
+                 "evidence": self.skill_manifest.evidence,
+                 "product_ref": self.skill_manifest.product_ref}
+        return {"did": self.did, "how": self.how, "evidence": self.evidence,
+                "delegated_to": self.delegated_to, "delegated_by": self.delegated_by,
+                "skill_manifest": m, "audit_status": self.audit_status,
+                "audit_reason": self.audit_reason}
+
+
+class AuditError(Exception):
+    """Raised when an accountability record fails the pre-report audit."""
+
+
 @dataclass
 class OrgNode:
     node_id: str
@@ -255,6 +317,8 @@ class OrgNode:
     children: list = field(default_factory=list)
     status: str = "pending"   # pending|dispatched|working|review|done|blocked
     product_keys: list = field(default_factory=list)
+    bound_skill: str | None = None           # 该执行者/主管绑定skill (强制对象)
+    accountability: Accountability | None = None   # 追责条目
 
 
 def _now_iso():
@@ -336,6 +400,8 @@ class OrganizationOrchestrator:
             kind="executor", department=department, role=role,
             parent=parent_manager_id, depth=depth, status="pending",
         )
+        # 绑定skill来自registry,是亲测强制化的对象(不是建议)
+        node.bound_skill = self._roles[role].get("skill_hint")
         self.org[node.node_id] = node
         return node
 
@@ -346,6 +412,7 @@ class OrganizationOrchestrator:
             kind="manager", department=department, role=role,
             parent=parent, depth=depth, status="pending",
         )
+        node.bound_skill = self._roles[role].get("skill_hint")
         self.org[node.node_id] = node
         return node
 
@@ -357,6 +424,170 @@ class OrganizationOrchestrator:
             executor_id=executor_id, department=node.department,
             parent_manager_id=node.parent,
         )
+
+    # ---- accountability / 追责制 / skill 强制 ----
+
+    def record_accountability(self, node_id: str, did: str, how: str,
+                              evidence: str = "",
+                              skill_manifest: SkillManifest | None = None) -> Accountability:
+        """节点向上汇报前,先写自己的责任条目(did/how/evidence + skill凭证).
+
+        链式指针在 set_delegation / collect 子方法里补齐, 这里只立条目。
+        汇报前的逐层审查由 audit_accountability() 做, 没过审不给签发产物。
+        """
+        node = self.org.get(node_id)
+        if node is None:
+            raise KeyError(f"no node {node_id}")
+        old = node.accountability
+        # 保留已有的链指针(set_delegation建的 delegated_to / delegated_by),
+        # 否则后续 record 把链指针擦掉, 顶向下追责断链。
+        acc = Accountability(
+            did=did, how=how, evidence=evidence,
+            delegated_by=(old.delegated_by if old else node.parent),
+            delegated_to=(old.delegated_to if old else []),
+            skill_manifest=skill_manifest,
+        )
+        node.accountability = acc
+        return acc
+
+    def set_delegation(self, manager_id: str, child_ids: list[str]):
+        """主管声明它指挥了哪些下游节点 —— 这是向下追责链的边."""
+        node = self.org.get(manager_id)
+        if node is None or node.kind != "manager":
+            raise KeyError(f"{manager_id} is not a manager")
+        node.children = list(child_ids)
+        if node.accountability is None:
+            node.accountability = Accountability(did="", how="")
+        node.accountability.delegated_to = list(child_ids)
+        # 反向补齐下游的 delegated_by 指向(若未设)
+        for cid in child_ids:
+            child = self.org.get(cid)
+            if child is not None and (child.accountability is None or
+                                      child.accountability.delegated_by is None):
+                if child.accountability is None:
+                    child.accountability = Accountability(did="", how="")
+                child.accountability.delegated_by = manager_id
+
+    def audit_accountability(self, node_id: str) -> str:
+        """汇报前逐层审查:校验责任条目齐全 + (执行者)skill凭证合规.
+
+        审查规则:
+          - did/how 必须非空 (空责任条目 = 没干, 拒)
+          - 执行者必须带合规 SkillManifest (skill_used==bound_skill 且 evidence非空)
+            ---- 这就是skill强制化的机制落点: 不调绑定skill -> manifest不合规 -> 拒审 -> 产物不签发 ----
+          - 管理者不强制skill凭证(它负责编排,但其下游必须已审过)
+        返回 'approved'/'rejected',拒绝时 node.accountability.audit_reason 列明。
+        """
+        node = self.org.get(node_id)
+        if node is None:
+            raise KeyError(f"no node {node_id}")
+        acc = node.accountability
+        reasons = []
+        if acc is None:
+            self._set_audit(node, "rejected", "no accountability recorded")
+            return "rejected"
+        if not (acc.did and acc.did.strip()):
+            reasons.append("empty 'did'")
+        if not (acc.how and acc.how.strip()):
+            reasons.append("empty 'how'")
+        # executor 必须有合规skill凭证 —— 强制点
+        if node.kind == "executor":
+            m = acc.skill_manifest
+            if m is None:
+                reasons.append("missing skill manifest (skill binding not enforced)")
+            elif not m.is_compliant(node.bound_skill):
+                reasons.append(
+                    f"skill manifest non-compliant: used '{m.skill_used}' "
+                    f"but bound skill is '{node.bound_skill}' (or empty evidence)"
+                )
+        if reasons:
+            self._set_audit(node, "rejected", "; ".join(reasons))
+            return "rejected"
+        self._set_audit(node, "approved", "")
+        return "approved"
+
+    def _set_audit(self, node, status, reason):
+        if node.accountability is None:
+            node.accountability = Accountability(did="", how="")
+        node.accountability.audit_status = status
+        node.accountability.audit_reason = reason
+
+    def issue_product_key(self, node_id: str, product_key: str) -> bool:
+        """准入门:只有审查通过(approved)的节点才签发产物key.
+
+        没审 / 审不过 -> 产物不被接受(等同没做). 这是把 accountability+skill强制
+        绑到'产物可信'的机制: 强制不在运行时拦截agent(),而在签发时拒签。
+        返回True=签发, False=拒签(附理由存于该节点audit_reason)。
+        """
+        node = self.org.get(node_id)
+        if node is None:
+            raise KeyError(f"no node {node_id}")
+        if node.accountability is None or node.accountability.audit_status != "approved":
+            if node.accountability is None:
+                self._set_audit(node, "rejected", "product requested w/o audit")
+            return False
+        if product_key in node.product_keys:
+            return True  # idempotent
+        node.product_keys.append(product_key)
+        node.status = "done"
+        return True
+
+    def collect_and_audit_chain(self, manager_id: str) -> dict:
+        """主管汇集:先逐个审查本部门下游执行者,全过审才把产物并入部门accountability.
+        任一未过 -> 该部门状态置blocked + 记升级(走 send_back/escalate)。"""
+        node = self.org.get(manager_id)
+        if node is None or node.kind != "manager":
+            raise KeyError(f"{manager_id} is not a manager")
+        child_ids = node.children
+        audit_results = {}
+        all_ok = True
+        for cid in child_ids:
+            verdict = self.audit_accountability(cid)
+            audit_results[cid] = verdict
+            if verdict != "approved":
+                all_ok = False
+        if not all_ok:
+            node.status = "blocked"
+            self._record_escalation({"gateway": 2, "manager": manager_id,
+                                    "reason": "downstream audit rejected",
+                                    "rejected": [c for c, v in audit_results.items() if v != "approved"]})
+            return {"collected": False, "audit": audit_results}
+        # 主管自审(它要把下游成果整合成部门产出,自审did/how/evidence)
+        own = self.audit_accountability(manager_id)
+        return {"collected": own == "approved", "audit": audit_results, "own": own}
+
+    def trace_accountability(self, top_id: str | None = None) -> list[dict]:
+        """从顶向下逐层追责:沿 delegated_to 链 DFS,把每个节点的 accountability dump出。
+        可从指定节点钻, 默认从所有顶层(parent=None)管理者开始。返回按层级的追责链。"""
+        def _gather(nid, acc_out, depth_seen):
+            node = self.org.get(nid)
+            if node is None or nid in depth_seen:
+                return
+            depth_seen.add(nid)
+            a = node.accountability
+            acc_out.append({
+                "node": nid, "kind": node.kind, "department": node.department,
+                "role": node.role, "depth": node.depth,
+                "audit_status": a.audit_status if a else "missing",
+                "did": a.did if a else "", "how": a.how if a else "",
+                "evidence": a.evidence if a else "",
+                "skill_used": (a.skill_manifest.skill_used if (a and a.skill_manifest) else None),
+                "bound_skill": node.bound_skill,
+                "delegated_to": (a.delegated_to if a else []),
+            })
+            # 边优先取 accountability.delegated_to;若空则兜底用 node.children
+            kids = (a.delegated_to if a else []) or (node.children or [])
+            for k in kids:
+                _gather(k, acc_out, depth_seen)
+        out: list[dict] = []
+        seen: set = set()
+        if top_id:
+            _gather(top_id, out, seen)
+        else:
+            for nid, n in self.org.items():
+                if n.parent is None:
+                    _gather(nid, out, seen)
+        return out
 
     # ---- message mediation (the ONLY legal send path) ----
 
