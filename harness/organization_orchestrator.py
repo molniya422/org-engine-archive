@@ -55,6 +55,18 @@ try:
 except Exception:  # pragma: no cover - guarantees import-time resilience
     EcosystemBridge = None
 
+# Skill loader — loads real skill files from disk for prompt injection + evidence validation.
+try:
+    from org_skill_loader import (inject_into_prompt, validate_evidence,
+                                   list_available_skills, get_skill_content)
+    _SKILL_LOADER_AVAILABLE = True
+except Exception:
+    inject_into_prompt = lambda n, b: b
+    validate_evidence = lambda n, e: {"valid": None, "reason": "loader unavailable"}
+    list_available_skills = lambda: {}
+    get_skill_content = lambda n: None
+    _SKILL_LOADER_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Constants / hard caps (mirrored from role-registry-org.yaml hard_caps)
@@ -365,12 +377,83 @@ class OrganizationOrchestrator:
         )
         self._cycles_by_layer: dict[int, int] = {}
         self._failures: dict[str, int] = {}
-        # optional bridge to loop-engineering + skill-attention + auto-summary+memory
-        # if None (or helpers missing), the bridge methods degrade silently.
+        # Optional bridge to loop-engineering + skill-attention + auto-summary+memory.
+        # If None (or helpers missing), the bridge methods degrade silently.
         self.bridge = EcosystemBridge() if EcosystemBridge else None
+        # Audit log: every subagent call, skill use, meeting, and audit decision
+        # gets a stamped entry. Feed for the summary report at the end.
+        self.audit_log: list[dict] = []
         self._init_state()
 
-    # ---- state ----
+    # ---- audit log: 每条事件都带时间戳 + actor + event_type + details ----
+
+    def log_event(self, event_type: str, actor: str, details: dict,
+                  target: str | None = None, result: str | None = None):
+        """写给总结报告的审计日志。每条是(time, type, who, what, target, outcome)。"""
+        self.audit_log.append({
+            "ts": _now_iso(),
+            "event_type": event_type,
+            "actor": actor,
+            "target": target,
+            "result": result,
+            "details": details,
+        })
+
+    def generate_summary_report(self) -> dict:
+        """从 audit_log 汇总出可读的总结报告: 用了几次subagent,哪些skills,
+        开了哪些会, 审计了什么内容, 等统计."""
+        ls = self.audit_log
+        mgr_count = [e for e in ls if e["event_type"] == "manager_created"]
+        exe_count = [e for e in ls if e["event_type"] == "executor_created"]
+        meeting_count = [e for e in ls if e["event_type"] == "meeting"]
+        audit_events = [e for e in ls if e["event_type"] == "audit"]
+        skill_rec = [e for e in ls if e["event_type"] == "skill_recommend"]
+        sk_used = set()
+        for e in ls:
+            sk = e.get("details", {}).get("skill_used")
+            if sk:
+                sk_used.add(sk)
+            sk2 = e.get("details", {}).get("skill")
+            if sk2:
+                sk_used.add(sk2)
+        # 聚合 meeting 会议表
+        meetings = []
+        for m in meeting_count:
+            d = m["details"]
+            meetings.append({
+                "cycle": d.get("cycle"), "decision": d.get("decision"),
+                "time": m["ts"],
+            })
+        # 聚合审计表
+        audits = []
+        for a in audit_events:
+            d = a["details"]
+            audits.append({
+                "node": a["actor"], "result": a["result"],
+                "reason": d.get("reason", ""),
+                "time": a["ts"],
+            })
+        return {
+            "session_id": self.session_id,
+            "total_events": len(ls),
+            "timeline": ls,
+            "summary_stats": {
+                "managers_created": len(mgr_count),
+                "executors_created": len(exe_count),
+                "meetings_held": len(meeting_count),
+                "audits_performed": len(audit_events),
+                "skills_used": sorted(sk_used),
+                "skill_recommendations": len(skill_rec),
+                "total_send_backs": len([e for e in ls
+                                          if e["event_type"] == "send_back"]),
+                "failures_recorded": len([e for e in ls
+                                           if e["event_type"] == "failure"]),
+                "product_keys_issued": len([e for e in ls
+                                             if e["event_type"] == "product_key"]),
+            },
+            "meeting_log": meetings,
+            "audit_log": audits,
+        }
 
     def _init_state(self):
         if self.state_path.exists():
@@ -509,6 +592,12 @@ class OrganizationOrchestrator:
                     f"skill manifest non-compliant: used '{m.skill_used}' "
                     f"but bound skill is '{node.bound_skill}' (or empty evidence)"
                 )
+            else:
+                # Layer 3: evidence must reference real skill file content
+                real_skill = node.bound_skill or m.skill_used
+                ev_res = validate_evidence(real_skill, m.evidence)
+                if ev_res.get('valid') is False:
+                    reasons.append(f"evidence doesn't match skill content: {ev_res.get('reason')}")
         if reasons:
             self._set_audit(node, "rejected", "; ".join(reasons))
             return "rejected"
@@ -828,6 +917,7 @@ class OrganizationOrchestrator:
             "org_size": len(self.org),
             "messages": len(self._messages),
             "escalations": self.state().get("escalations", []),
+            "audit_log_size": len(self.audit_log),
             "awaiting_user_decision": True,
         }
 

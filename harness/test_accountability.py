@@ -76,7 +76,8 @@ class TestSkillEnforcement(unittest.TestCase):
             evidence="design tokens applied", skill_manifest=manifest)
 
     def test_compliant_manifest_approved(self):
-        m = SkillManifest(skill_used="taste-skill", evidence="tokens/*.css applied",
+        m = SkillManifest(skill_used="taste-skill",
+                          evidence="Set DESIGN_VARIANCE to 8 following taste-skill's Three Dials rule",
                           product_ref="fe:pages-login")
         self._record(m)
         self.assertEqual(self.orch.audit_accountability(self.ex.node_id), "approved")
@@ -130,7 +131,9 @@ class TestProductKeyGating(unittest.TestCase):
     def test_approved_then_signed(self):
         self.orch.record_accountability(self.ex.node_id, did="built", how="ok",
             evidence="e", skill_manifest=SkillManifest(
-                skill_used="taste-skill", evidence="ok", product_ref="x"))
+                skill_used="taste-skill",
+                evidence="Set DESIGN_VARIANCE following Three Dials rule",
+                product_ref="x"))
         self.assertEqual(self.orch.audit_accountability(self.ex.node_id), "approved")
         self.assertTrue(self.orch.issue_product_key(self.ex.node_id, "fe:page"))
         self.assertEqual(self.ex.status, "done")
@@ -152,9 +155,15 @@ class TestCollectAndAuditChain(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _approve_executor(self, node):
-        self.orch.record_accountability(node.node_id, did="d", how="h", evidence="e",
+        # Use evidence that references real skill content (keywords ≥2 chars in same paragraph)
+        ev_map = {"taste-skill": "Set DESIGN_VARIANCE following Three Dials rule in the skill",
+                  "stitch-skill": "Generate the DESIGN.md for visual atmosphere and color calibration",
+                  "fe_page_builder": "Set DESIGN_VARIANCE following Three Dials rule in the skill",
+                  "fe_ui_system": "Generate the DESIGN.md for visual atmosphere and color calibration"}
+        ev = ev_map.get(node.bound_skill or "") or ev_map.get(node.role) or "skill content reference"
+        self.orch.record_accountability(node.node_id, did="d", how="h", evidence=ev,
             skill_manifest=SkillManifest(skill_used=node.bound_skill,
-                                         evidence="ok", product_ref="x"))
+                                         evidence=ev, product_ref="x"))
 
     def test_all_children_approved_then_collected(self):
         for n in (self.e1, self.e2):
@@ -195,13 +204,18 @@ class TestTraceAccountability(unittest.TestCase):
         self.e2 = self.orch.add_executor("fe_ui_system", "FE", self.mgr.node_id, depth=3)
         self.orch.set_delegation(self.mgr.node_id, [self.e1.node_id, self.e2.node_id])
         for n in (self.e1, self.e2):
+            # Use evidence that references real skill content
+            if n.bound_skill == "taste-skill":
+                ev = "Set DESIGN_VARIANCE following Three Dials rule in the skill"
+            else:
+                ev = "Generate the DESIGN.md for visual atmosphere and color calibration"
             self.orch.record_accountability(n.node_id, did=f"did-{n.role}",
-                how="ok", evidence="e",
-                skill_manifest=SkillManifest(skill_used=n.bound_skill, evidence="ok",
+                how="ok", evidence=ev,
+                skill_manifest=SkillManifest(skill_used=n.bound_skill, evidence=ev,
                                              product_ref="x"))
             self.orch.audit_accountability(n.node_id)
         self.orch.record_accountability(self.mgr.node_id, did="collected", how="merged",
-            evidence="pkg")
+            evidence="department package following contract")
         self.orch.audit_accountability(self.mgr.node_id)
 
     def tearDown(self):
