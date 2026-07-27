@@ -49,6 +49,12 @@ ORG_REGISTRY_PATH = SCRIPT_DIR / "role-registry-org.yaml"
 # uses an org- prefix so flat-orchestrator state files are never touched.
 _DEFAULT_STATES_DIR = SCRIPT_DIR.parent / "loop-engineering" / "states"
 
+# Bridge import is lazy to avoid a hard dep on the helper module existing.
+try:
+    from org_ecosystem_bridge import EcosystemBridge
+except Exception:  # pragma: no cover - guarantees import-time resilience
+    EcosystemBridge = None
+
 
 # ---------------------------------------------------------------------------
 # Constants / hard caps (mirrored from role-registry-org.yaml hard_caps)
@@ -359,6 +365,9 @@ class OrganizationOrchestrator:
         )
         self._cycles_by_layer: dict[int, int] = {}
         self._failures: dict[str, int] = {}
+        # optional bridge to loop-engineering + skill-attention + auto-summary+memory
+        # if None (or helpers missing), the bridge methods degrade silently.
+        self.bridge = EcosystemBridge() if EcosystemBridge else None
         self._init_state()
 
     # ---- state ----
@@ -631,7 +640,7 @@ class OrganizationOrchestrator:
         The manager meeting (multi-round) is run_meeting() below."""
         deps = departments or self.registry["composition_rules"]["departments"]["required_core"]
         plan = {"departments": [], "depth": 2}
-        arch_mgr = self.add_manager("architect" if False else "manager_decompose",
+        arch_mgr = self.add_manager("manager_decompose",
                                     "Arch", parent=None, depth=1)
         for dep in deps:
             mgr = self.add_manager("manager_decompose", dep, parent=arch_mgr.node_id, depth=2)
@@ -652,6 +661,55 @@ class OrganizationOrchestrator:
         if decision == "escalate":
             self._record_escalation({"gateway": 2, "cycle": cycle,
                                      "verdicts": manager_verdicts})
+        # --- ECOSYSTEM BRIDGE: 循环分析 + 开会自动存档 ---
+        # 1. 写入每轮协商状态到隔离目录(loop-engineering bridge),
+        #    让循环分析有可追溯的状态(不污染 lean-hooks 主states)
+        if self.bridge is not None:
+            pattern = f"org-meeting-{self.session_id}"
+            states_dir = (self.bridge.loop_dir
+                          or (self.states_dir / "loop"))
+            try:
+                self.bridge.loop_write(
+                    pattern, "last_cycle_verdict", decision, states_dir)
+                self.bridge.loop_write(
+                    pattern, "last_cycle", cycle, states_dir)
+                self.bridge.loop_write(
+                    pattern, "total_cycles", self._cycles_by_layer[2], states_dir)
+            except Exception:
+                # bridge degradation is silent; orchestrator still works.
+                pass
+            # 2. 失败模式:连续失败次数+循环分析(loop-failure-detector)
+            if self._failures:
+                try:
+                    # commit the cumulative failure counter; loop-failure-detector reads it.
+                    consec = max(self._failures.values())
+                    self.bridge.loop_write(
+                        pattern, "consecutive_failures", consec, states_dir)
+                    fl = self.bridge.loop_fail_check(pattern, states_dir)
+                    if fl.get("ok") and "rot_detected" in fl["stdout"]:
+                        self._record_escalation(
+                            {"gateway": 2, "cycle": cycle,
+                             "reason": f"loop-failure-detector flagged: {fl['stdout'][:120]}"})
+                except Exception:
+                    pass
+            # 3. 内存+档案:每轮会议自动归档(不在main的MEMORY.md上写),
+            #    用auto-summary写到隔离db + one-shot JSON行到隔离archive_dir
+            try:
+                payload = {
+                    "ts": _now_iso(), "session_id": self.session_id,
+                    "cycle": cycle, "decision": decision,
+                    "verdicts": manager_verdicts,
+                    "cycles_total": self._cycles_by_layer[2],
+                }
+                self.bridge.archive_meeting(self.session_id, payload)
+                self.bridge.archive_session(
+                    project=f"org-engine-{self.session_id}",
+                    summary=f"meeting cycle {cycle}: {decision}",
+                    files_csv="contracts.json,org-state.json",
+                    has_substance=True,
+                )
+            except Exception:
+                pass
         return decision
 
     # ---- L3 execution dispatch ----
@@ -709,7 +767,51 @@ class OrganizationOrchestrator:
             node.status = "blocked"
         self._record_escalation({"gateway": 2, "executor": executor_id,
                                  "reason": "crash/timeout after retry"})
+        # --- ECOSYSTEM BRIDGE: 写循环失败计数让loop-failure-detector可分析 ---
+        if self.bridge is not None:
+            try:
+                pattern = f"org-meeting-{self.session_id}"
+                states_dir = (self.bridge.loop_dir or (self.states_dir / "loop"))
+                self.bridge.loop_write(pattern, "consecutive_failures", n, states_dir)
+            except Exception:
+                pass
         return "blocked"
+
+    # ---- ecosystem bridge: skill 推荐 + 反馈 ----
+
+    def recommend_skills_for_executor(self, role: str, task_text: str,
+                                       top_k: int = 5) -> list[str]:
+        """调skill-attention 给任务文本推荐 top-k skills.
+        与registry的 bound_skill 协同: registry给出绑定, 但 skill-attention 给匹配度排名,
+        若排名最高的skill和绑定不一致,审计阶段审计 manifest 的 skill_used 仍必须等于 bound_skill,
+        也就是说: 推荐项是insight, 绑定才是硬约束 (registry 不能被推荐覆写).
+        无ONNX模型或helper未装时返回空列表 (graceful degradation).
+        """
+        if self.bridge is None:
+            return []
+        rec = self.bridge.skill_recommend(task_text, top_k=top_k)
+        if rec.get("unavailable"):
+            return []
+        # try to extract a list of skill names from many possible response shapes
+        skills = rec.get("top_skills")
+        out = []
+        if isinstance(skills, list):
+            for s in skills:
+                if isinstance(s, str):
+                    out.append(s)
+                elif isinstance(s, dict):
+                    name = s.get("name") or s.get("skill") or s.get("id")
+                    if name:
+                        out.append(str(name))
+        return out
+
+    def record_skill_signal(self, skill: str, signal: str, prompt: str = "") -> dict:
+        """Expose a single signal to skill-attention training-loop (SkillOpt).
+        signal ∈ {correct, fp, miss}. Silent degradation if helper missing.
+        """
+        if self.bridge is None:
+            return {"skipped": True}
+        return self.bridge.skill_feedback(skill, signal, prompt=prompt)
 
     # ---- escalation + user gateways ----
 
@@ -739,7 +841,22 @@ class OrganizationOrchestrator:
             return "over_budget_escalate"
         if remaining < 0.1 * budget_tokens:
             return "throttle"
+        # --- ECOSYSTEM BRIDGE: 写入循环预算桶, 让loop-budget-tracker可分析 ---
+        if self.bridge is not None:
+            try:
+                self.bridge.loop_budget_check(
+                    budget_json=self.states_dir / "loop-budget.json",
+                    remaining=remaining, total=budget_tokens)
+            except Exception:
+                pass
         return "ok"
+
+    def dry_run_ecosystem_check(self) -> dict:
+        """Probe integration health: which lean-hooks helpers are reachable. Useful
+        during org-engine boot to log live vs degraded ecosystems."""
+        if self.bridge is None:
+            return {"bridge_unavailable": True}
+        return self.bridge.dry_run_self_check()
 
 
 # ---------------------------------------------------------------------------

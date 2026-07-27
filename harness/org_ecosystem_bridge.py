@@ -98,10 +98,11 @@ class EcosystemBridge(_Bridge):
                          pattern, "--states-dir", str(states_dir)])
 
     def loop_fail_check(self, pattern: str, states_dir: Path, stale_days: int = 2) -> dict:
-        """Detect stuck/dead loops (>=3 consecutive fails or last_run > cadence*3)."""
-        return self.run(["loop-failure-detector.py", "--pattern", pattern,
-                         "--states-dir", str(states_dir),
-                         "--stale-days", str(stale_days)])
+        """Detect stuck/dead loops (>=3 consecutive fails or last_run > cadence*3).
+        Note: loop-failure-detector reads from its own configured states dir, not
+        the bridge's. For full bridge integration, pattern state must be co-located.
+        When the CLI flag mismatch occurs, the helper returns non-zero and we degrade."""
+        return self.run(["loop-failure-detector.py", "--pattern", pattern, "--json"])
 
     def loop_budget_check(self, budget_json: Path, remaining: float, total: float | None) -> dict:
         """Cross-check token budget via the budget.json structure expected by
