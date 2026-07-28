@@ -13,8 +13,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:5172', changeOrigin: true },
-      '/ws': { target: 'ws://localhost:5172', ws: true },
+      '/api': { target: process.env.VITE_PROXY_TARGET || 'http://localhost:5172', changeOrigin: true },
+      '/ws': { target: (process.env.VITE_PROXY_TARGET || 'http://localhost:5172').replace('http', 'ws'), ws: true },
     },
   },
 });
