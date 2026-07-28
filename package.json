@@ -2,6 +2,9 @@
   "name": "org-engine-editor",
   "version": "0.1.0",
   "private": true,
+  "description": "Org Engine Editor - Configure and manage multi-agent organizational hierarchies",
+  "author": "Org Engine Team",
+  "main": "electron/dist/main.js",
   "workspaces": [
     "backend-server",
     "frontend"

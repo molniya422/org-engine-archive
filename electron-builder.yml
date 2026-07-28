@@ -16,10 +16,8 @@ extraResources:
     to: harness/orchestrator-adapter.exe
 
 win:
-  target:
-    - target: nsis
-      arch:
-        - x64
+  target: nsis
+  sign: null
 
 nsis:
   oneClick: false
