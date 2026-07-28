@@ -14,8 +14,12 @@ export function registerRunRoutes(app: FastifyInstance, runManager: RunManager):
     return state;
   });
   app.post<{ Params: { id: string }; Body: { gateway: string; decision: unknown } }>('/api/v1/runs/:id/decision', async (req, reply) => {
+    if (runManager.current?.runId !== req.params.id) { reply.code(404); return { error: 'Run not found or not active' }; }
     try { await runManager.submitDecision(req.body.gateway, req.body.decision); return { ok: true }; }
     catch (e: any) { reply.code(400); return { error: e.message }; }
   });
-  app.post<{ Params: { id: string } }>('/api/v1/runs/:id/cancel', async (req) => { await runManager.cancel(); return { ok: true }; });
+  app.post<{ Params: { id: string } }>('/api/v1/runs/:id/cancel', async (req, reply) => {
+    if (runManager.current?.runId !== req.params.id) { reply.code(404); return { error: 'Run not found or not active' }; }
+    await runManager.cancel(); return { ok: true };
+  });
 }

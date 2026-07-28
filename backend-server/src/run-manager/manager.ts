@@ -39,23 +39,22 @@ export class RunManager extends EventEmitter {
     this.client.on('stderr', (data: string) => this.emit('stderr', data));
     this.state.status = 'running';
     await this.persistence.save(runId, this.state);
-    await this.client.start(configPath, task, outputDir, leanHooksDir).catch(err => { this.block(err.message); });
+    await this.client.start(configPath, task, outputDir, leanHooksDir).catch(async err => { await this.block(err.message); });
     return runId;
   }
 
-  private onEvent = (event: OrchestratorEvent) => {
+  private onEvent = async (event: OrchestratorEvent) => {
     if (!this.state) return;
     this.state.events.push(event);
     this.state.updatedAt = new Date().toISOString();
     if (event.type === 'gateway_prompt') { this.state.status = 'awaiting_user'; this.state.gateway = event.gateway; }
-    else if (event.type === 'run_completed') { this.state.status = event.status; this.cleanup(); }
-    else if (event.type === 'roadblock') { this.block(event as any); }
-    this.persistence.save(this.state.runId, this.state);
+    else if (event.type === 'run_completed') { this.state.status = event.status === 'success' ? 'done' : event.status; this.cleanup(); }
+    await this.persistence.save(this.state.runId, this.state);
     this.emit('event', event);
   };
 
-  private onExit = (code: number | null) => {
-    if (this.state && this.state.status === 'running') { this.block(`Process exited with code ${code}`); }
+  private onExit = async (code: number | null) => {
+    if (this.state && this.state.status === 'running') { await this.block(`Process exited with code ${code}`); }
   };
 
   async submitDecision(gateway: string, decision: unknown): Promise<void> {
@@ -73,8 +72,8 @@ export class RunManager extends EventEmitter {
     this.cleanup();
   }
 
-  private block(reason: string): void {
-    if (this.state) { this.state.status = 'blocked'; this.state.updatedAt = new Date().toISOString(); this.persistence.save(this.state.runId, this.state); }
+  private async block(reason: string): Promise<void> {
+    if (this.state) { this.state.status = 'blocked'; this.state.updatedAt = new Date().toISOString(); await this.persistence.save(this.state.runId, this.state); }
     this.emit('blocked', reason);
     this.cleanup();
   }

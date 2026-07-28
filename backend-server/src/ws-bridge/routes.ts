@@ -7,10 +7,10 @@ export function registerWsRoutes(app: FastifyInstance, runManager: RunManager, p
     const runId = (req.params as any).id;
     persistence.load(runId).then(state => {
       if (state) socket.send(JSON.stringify({ type: 'state_snapshot', state }));
-    });
-    const onEvent = (event: any) => { try { socket.send(JSON.stringify(event)); } catch {} };
+    }).catch(err => app.log.error(err, 'Failed to load run state'));
+    const onEvent = (event: any) => { try { socket.send(JSON.stringify(event)); } catch (err) { app.log.error(err, 'Failed to send event over ws'); } };
     runManager.on('event', onEvent);
     socket.on('close', () => runManager.removeListener('event', onEvent));
-    socket.on('error', () => {});
+    socket.on('error', (err) => app.log.error(err, 'WebSocket error'));
   });
 }
