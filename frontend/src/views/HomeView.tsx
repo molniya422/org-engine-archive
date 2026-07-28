@@ -1,88 +1,159 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOrgStore } from '@/stores/org-store';
-import { api } from '@/api/client';
-import { t } from '@/i18n';
+import { api } from '../api/client';
+import { t } from '../i18n';
 import styles from './HomeView.module.css';
 
+interface OrgSummary {
+  id: string;
+  name: string;
+  deptCount: number;
+  roleCount: number;
+}
+
 interface ActiveRun {
-  runId: string;
-  status: string;
-  orgId: string;
-  task: string;
+  active: boolean;
+  runId?: string;
+  orgId?: string;
+  task?: string;
 }
 
 export function HomeView() {
   const navigate = useNavigate();
-  const { orgs, loading, error, fetchOrgs } = useOrgStore();
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeRun, setActiveRun] = useState<ActiveRun | null>(null);
 
   useEffect(() => {
-    fetchOrgs();
-  }, [fetchOrgs]);
-
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const data = await api.getActiveRun();
-        if (data && data.active !== false) setActiveRun(data);
-        else setActiveRun(null);
-      } catch { setActiveRun(null); }
-    };
-    check();
-    const iv = setInterval(check, 5000);
-    return () => clearInterval(iv);
+    loadOrgs();
+    checkActiveRun();
+    const interval = setInterval(checkActiveRun, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{t('Organizations')}</h1>
-        <p className={styles.subtitle}>{t('Configure and manage your organization hierarchies for multi-agent execution')}</p>
-      </header>
+  async function loadOrgs() {
+    try {
+      const list = await api.listOrgs();
+      setOrgs(list);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }
 
-      {activeRun && (
-        <div className={styles.activeRunBanner}>
-          <span className={styles.runIndicator} />
-          <span>
-            <strong>{activeRun.status === 'awaiting_user' ? '等待决策' : '正在运行'}</strong>
-            ：{activeRun.task} — <button className={styles.runLink} onClick={() => navigate(`/studio/${activeRun.orgId}/runs/${activeRun.runId}`)}>查看详情</button>
-          </span>
+  async function checkActiveRun() {
+    try {
+      const run = await api.getActiveRun();
+      setActiveRun(run);
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <div className={styles.homeContainer}>
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div>
+            <h1 className={styles.headerTitle}>{t('home.title')}</h1>
+            <p className={styles.headerSubtitle}>{t('home.subtitle')}</p>
+          </div>
+        </div>
+        <div className={styles.toolbar}>
+          <button className={styles.createBtn} onClick={() => navigate('/studio/new')}>
+            + {t('home.createOrg')}
+          </button>
+        </div>
+      </div>
+
+      {/* Active run banner */}
+      {activeRun?.active && (
+        <div className={styles.runBanner}>
+          <div className={styles.runDot} />
+          <div className={styles.runInfo}>
+            <div className={styles.runTitle}>{activeRun.task}</div>
+            <div className={styles.runOrg}>{activeRun.orgId}</div>
+          </div>
+          <button
+            className={styles.viewRunBtn}
+            onClick={() => navigate(`/run/${activeRun.runId}`)}
+          >
+            {t('run.viewDetails')}
+          </button>
         </div>
       )}
 
-      {error && <div className={styles.error}>{error}</div>}
+      {/* Loading state */}
+      {loading && (
+        <div className={styles.emptyState}>
+          <p>{t('common.loading')}</p>
+        </div>
+      )}
 
-      {loading ? (
-        <div className={styles.loading}>{t('Loading...')}</div>
-      ) : (
-        <div className={styles.grid}>
-          {orgs.map(org => (
-            <button
-              key={org.id}
-              className={styles.card}
-              onClick={() => navigate(`/studio/${org.id}`)}
-            >
-              <h3 className={styles.cardTitle}>
-                {org.name}
-                {activeRun?.orgId === org.id && (
-                  <span className={styles.orgRunBadge}>
-                    {activeRun.status === 'awaiting_user' ? '等待' : '运行中'}
-                  </span>
-                )}
-              </h3>
-              <div className={styles.cardStats}>
-                <span>{org.deptCount}{t('departments')}</span>
-                <span>{org.roleCount}{t('roles')}</span>
-              </div>
-            </button>
-          ))}
-
-          <button className={styles.newCard} onClick={() => navigate('/studio/new')}>
-            <span className={styles.newIcon}>+</span>
-            <span>{t('New Organization')}</span>
+      {/* Empty state */}
+      {!loading && orgs.length === 0 && (
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>🏢</div>
+          <h2 className={styles.emptyTitle}>{t('home.emptyTitle')}</h2>
+          <p className={styles.emptyDesc}>{t('home.emptyDesc')}</p>
+          <button className={styles.createBtn} onClick={() => navigate('/studio/new')}>
+            + {t('home.createOrg')}
           </button>
         </div>
+      )}
+
+      {/* Org grid */}
+      {orgs.length > 0 && (
+        <>
+          <div className={styles.orgGrid}>
+            {orgs.map((org) => (
+              <div
+                key={org.id}
+                className={styles.orgCard}
+                onClick={() => navigate(`/studio/${org.id}`)}
+              >
+                <h3 className={styles.orgName}>{org.name}</h3>
+                <p className={styles.orgMeta}>
+                  {org.deptCount} departments · {org.roleCount} roles
+                </p>
+                <div className={styles.orgBadges}>
+                  <span className={styles.badge}>
+                    📁 {org.deptCount} depts
+                  </span>
+                  <span className={styles.badge}>
+                    👤 {org.roleCount} roles
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick actions */}
+          <div className={styles.quickActions}>
+            <div className={styles.actionCard} onClick={() => navigate('/studio/new')}>
+              <div className={styles.actionIcon}>➕</div>
+              <p className={styles.actionLabel}>{t('home.createOrg')}</p>
+              <p className={styles.actionDesc}>{t('home.createOrgDesc')}</p>
+            </div>
+            <div className={styles.actionCard} onClick={() => navigate('/skills')}>
+              <div className={styles.actionIcon}>🔧</div>
+              <p className={styles.actionLabel}>{t('nav.skills')}</p>
+              <p className={styles.actionDesc}>{t('home.skillsDesc')}</p>
+            </div>
+            <div
+              className={styles.actionCard}
+              onClick={async () => {
+                if (orgs.length > 0) {
+                  try {
+                    const yaml = await api.exportOrg(orgs[0].id, 'yaml');
+                    await navigator.clipboard.writeText(yaml);
+                    alert(t('export.copied'));
+                  } catch { /* ignore */ }
+                }
+              }}
+            >
+              <div className={styles.actionIcon}>📋</div>
+              <p className={styles.actionLabel}>{t('export.copy')}</p>
+              <p className={styles.actionDesc}>{t('home.exportDesc')}</p>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

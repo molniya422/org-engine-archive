@@ -1,140 +1,234 @@
-.container {
-  max-width: 960px;
+/* Improved HomeView layout */
+.homeContainer {
+  padding: 24px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .header {
-  margin-bottom: var(--space-8);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
-.title {
-  font-size: var(--font-size-2xl);
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerTitle {
+  font-size: 1.5rem;
   font-weight: 700;
-  color: var(--color-text);
-  margin-bottom: var(--space-2);
+  margin: 0;
 }
 
-.subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+.headerSubtitle {
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+  margin: 4px 0 0 0;
 }
 
-.error {
-  background: #FEF2F2;
-  color: var(--color-error);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
-  font-size: var(--font-size-sm);
-}
-
-.loading {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  padding: var(--space-8) 0;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-4);
-}
-
-.card, .newCard {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  text-align: left;
-  transition: box-shadow 0.15s, transform 0.15s;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-.cardTitle {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-}
-
-.cardStats {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  display: flex;
-  gap: var(--space-3);
-}
-
-.newCard {
-  border-style: dashed;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  min-height: 120px;
-}
-
-.newCard:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.newIcon {
-  font-size: 2rem;
-  font-weight: 300;
-  line-height: 1;
-}
-
-.activeRunBanner {
+.toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-4);
-  font-size: var(--font-size-sm);
-  color: #166534;
+  gap: 8px;
 }
 
-.runIndicator {
+/* Active run banner */
+.runBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid #0f3460;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  color: #e0e0e0;
+}
+
+.runDot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #22c55e;
-  animation: pulse 1.5s infinite;
-  flex-shrink: 0;
+  background: #00ff88;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px #00ff88; }
+  50% { opacity: 0.5; box-shadow: 0 0 8px #00ff88; }
 }
 
-.runLink {
-  background: none;
-  border: none;
-  color: var(--color-primary);
-  text-decoration: underline;
+.runInfo {
+  flex: 1;
+}
+
+.runTitle {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.runOrg {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.viewRunBtn {
+  padding: 6px 14px;
+  background: #0f3460;
+  color: #e0e0e0;
+  border: 1px solid #1a5276;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: inherit;
-  padding: 0;
+  font-size: 0.85rem;
+  transition: background 0.2s;
 }
 
-.orgRunBadge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 500;
-  padding: 1px 6px;
+.viewRunBtn:hover {
+  background: #1a5276;
+}
+
+/* Org grid */
+.orgGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.orgCard {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
   border-radius: 10px;
-  background: #22c55e;
+  padding: 20px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.orgCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.orgName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.orgMeta {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #666);
+  margin: 0;
+}
+
+.orgBadges {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--badge-bg, #f0f0f0);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #555);
+}
+
+.badgeRunning {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* Empty state */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary, #888);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.emptyTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--text-primary, #333);
+}
+
+.emptyDesc {
+  font-size: 0.9rem;
+  margin: 0 0 20px 0;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.createBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--primary, #1976d2);
   color: white;
-  margin-left: 8px;
-  vertical-align: middle;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.createBtn:hover {
+  background: var(--primary-dark, #1565c0);
+}
+
+/* Quick actions */
+.quickActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.actionCard {
+  flex: 1;
+  padding: 16px;
+  border: 1px dashed var(--border-color, #ccc);
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.actionCard:hover {
+  border-color: var(--primary, #1976d2);
+  background: var(--primary-bg, #e3f2fd);
+}
+
+.actionIcon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.actionLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.actionDesc {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #888);
+  margin: 4px 0 0 0;
 }
