@@ -1,0 +1,113 @@
+version: "1.0"
+org:
+  name: default-org
+  description: "Default organization configuration for org-engine"
+  departments:
+    - name: Arch
+      description: "Cross-cutting technical decisions, contract first-drafting, risk"
+      required: true
+      roles:
+        - name: architect
+          agentType: general-purpose
+          bound_skill: design-patterns
+          can_veto: true
+          can_escalate: true
+        - name: integrator
+          agentType: general-purpose
+          bound_skill: pathfinder
+          can_escalate: true
+      manager_pipeline:
+        - name: decompose
+          agentType: general-purpose
+          bound_skill: pathfinder
+        - name: dispatch
+          agentType: general-purpose
+          bound_skill: dispatching-parallel-agents
+        - name: collect
+          agentType: general-purpose
+          bound_skill: summarize
+        - name: review
+          agentType: general-purpose
+          bound_skill: requesting-code-review
+
+    - name: FE
+      description: "UI / Client implementation"
+      required: true
+      roles:
+        - name: fe_page_builder
+          agentType: general-purpose
+          bound_skill: taste-skill
+        - name: fe_ui_system
+          agentType: general-purpose
+          bound_skill: stitch-skill
+
+    - name: BE
+      description: "Services / data / business logic"
+      required: true
+      roles:
+        - name: implementer
+          agentType: general-purpose
+          bound_skill: test-driven-development
+
+    - name: QA
+      description: "Cross-department quality gate, acceptance criteria"
+      required: true
+      roles:
+        - name: reviewer
+          agentType: general-purpose
+          bound_skill: pr-review
+          can_veto: true
+          can_escalate: true
+        - name: tester
+          agentType: general-purpose
+          bound_skill: verification-before-completion
+          can_escalate: true
+
+    - name: Docs
+      description: "User / API / architecture doc authoring"
+      required: true
+      roles:
+        - name: docs_author
+          agentType: general-purpose
+          bound_skill: elements-of-style:writing-clearly-and-concisely
+
+    - name: Sec
+      description: "Security review, permission model, dependency audit"
+      required: false
+      roles:
+        - name: security_auditor
+          agentType: general-purpose
+          bound_skill: security-guardian
+          can_veto: true
+          can_escalate: true
+
+    - name: Design
+      description: "Design systems, visual consistency"
+      required: false
+      roles:
+        - name: designer
+          agentType: general-purpose
+          bound_skill: design-is
+
+  contracts:
+    - key: api-spec
+      owner_dept: Arch
+      version: 1
+      schema:
+        type: object
+        properties: {}
+      dependents:
+        - Arch
+        - FE
+        - BE
+        - QA
+        - Docs
+        - Sec
+        - Design
+
+budget:
+  max_depth: 3
+  max_cycles_per_layer: 3
+  max_executors_per_department: 6
+  max_parallel_agents: 8
+  gateway_timeout_minutes: 60

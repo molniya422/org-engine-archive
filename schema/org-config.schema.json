@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OrgConfig",
+  "type": "object",
+  "required": ["version", "org", "budget"],
+  "properties": {
+    "version": { "const": "1.0" },
+    "org": {
+      "type": "object",
+      "required": ["name", "departments"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
+        "description": { "type": "string", "maxLength": 500 },
+        "departments": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/department" } },
+        "contracts": { "type": "array", "items": { "$ref": "#/$defs/contract" } }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "max_depth": { "type": "integer", "minimum": 1, "maximum": 5, "default": 3 },
+        "max_cycles_per_layer": { "type": "integer", "minimum": 1, "maximum": 10, "default": 3 },
+        "max_executors_per_department": { "type": "integer", "minimum": 1, "maximum": 20, "default": 6 },
+        "max_parallel_agents": { "type": "integer", "minimum": 1, "default": 8 },
+        "gateway_timeout_minutes": { "type": "integer", "minimum": 5, "default": 60 }
+      }
+    },
+    "skill_paths": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "department": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+        "description": { "type": "string", "maxLength": 300 },
+        "required": { "type": "boolean", "default": false },
+        "roles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/role" } },
+        "manager_pipeline": { "type": "array", "items": { "$ref": "#/$defs/manager_stage" } }
+      }
+    },
+    "role": {
+      "type": "object",
+      "required": ["name", "agentType", "bound_skill"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "description": { "type": "string", "maxLength": 500 },
+        "agentType": { "type": "string", "description": "From runtime agent-type pool" },
+        "bound_skill": { "type": "string", "description": "From scanned skill pool" },
+        "prompt_vars": { "type": "object", "additionalProperties": { "type": "string" } },
+        "verdict_format": { "type": "string", "maxLength": 200 },
+        "can_veto": { "type": "boolean", "default": false },
+        "can_escalate": { "type": "boolean", "default": false },
+        "parallel_with": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "manager_stage": {
+      "type": "object",
+      "required": ["name", "agentType", "bound_skill"],
+      "properties": {
+        "name": { "enum": ["decompose", "dispatch", "collect", "review"] },
+        "agentType": { "type": "string" },
+        "bound_skill": { "type": "string" },
+        "prompt_vars": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "required": ["key", "owner_dept", "version", "schema"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "owner_dept": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 },
+        "schema": { "type": "object" },
+        "dependents": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
