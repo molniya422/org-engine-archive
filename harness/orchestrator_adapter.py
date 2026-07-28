@@ -17,11 +17,11 @@ import sys
 import traceback
 from pathlib import Path
 
-from organization_orchestrator import (
+from harness.organization_orchestrator import (
     OrganizationOrchestrator,
     ChannelVerdict,
 )
-from org_config_loader import load_org_config
+from harness.org_config_loader import load_org_config
 
 
 class OrchestratorAdapter:
