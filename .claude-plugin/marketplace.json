@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/marketplace.json",
+  "name": "org-engine-editor",
+  "owner": {
+    "name": "Org Engine Team"
+  },
+  "description": "Org Engine Editor — manage multi-agent organization hierarchies, run workflows, and export configs. Accessible from Claude Code via stdio MCP.",
+  "plugins": [
+    {
+      "name": "org-engine-editor",
+      "source": "./plugins/org-engine-editor",
+      "description": "MCP server for managing multi-agent org configs"
+    }
+  ]
+}

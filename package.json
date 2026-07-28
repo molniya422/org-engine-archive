@@ -5,6 +5,9 @@
   "description": "Org Engine Editor - Configure and manage multi-agent organizational hierarchies",
   "author": "Org Engine Team",
   "main": "electron/dist/main.js",
+  "bin": {
+    "org-engine-editor": "./apps/cli.mjs"
+  },
   "workspaces": [
     "backend-server",
     "frontend"
