@@ -5,7 +5,8 @@ let mainWindow: BrowserWindow | null = null;
 
 async function createWindow() {
   // Start backend server (bundled CJS, require() works)
-  const { startServer } = require(path.join(__dirname, '../backend-server/bundle/server.cjs'));
+  // __dirname = electron/dist/ → need ../../ to reach project root
+  const { startServer } = require(path.join(__dirname, '../../backend-server/bundle/server.cjs'));
   await startServer();
 
   mainWindow = new BrowserWindow({
@@ -21,7 +22,7 @@ async function createWindow() {
   });
 
   // Load built frontend
-  mainWindow.loadFile(path.join(__dirname, '../frontend/dist/index.html'));
+  mainWindow.loadFile(path.join(__dirname, '../../frontend/dist/index.html'));
 
   mainWindow.on('closed', () => { mainWindow = null; });
 }

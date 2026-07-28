@@ -25,6 +25,11 @@ export class Validator {
         join(cwd, 'schema', 'org-config.schema.json'),
         join(cwd, '..', 'schema', 'org-config.schema.json'),
       ];
+      // Also check packaged Electron app resources
+      const resourcesPath = (process as any).resourcesPath;
+      if (resourcesPath) {
+        candidates.push(join(resourcesPath, 'schema', 'org-config.schema.json'));
+      }
       resolvedPath = candidates.find(p => existsSync(p)) || candidates[0];
     }
 
