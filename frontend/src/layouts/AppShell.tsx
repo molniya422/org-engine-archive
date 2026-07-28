@@ -6,14 +6,29 @@ export function AppShell() {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.logo}>OrgEngine</div>
+        <div className={styles.logo}>⚙ OrgEngine</div>
         <nav className={styles.nav}>
-          <NavLink to="/" end>{t('Home')}</NavLink>
-          <NavLink to="/skills">{t('Skills')}</NavLink>
+          <NavLink to="/" end className={({ isActive }) => isActive ? styles.active : ''}>
+            🏠 {t('nav.home')}
+          </NavLink>
+          <NavLink to="/skills" className={({ isActive }) => isActive ? styles.active : ''}>
+            🔧 {t('nav.skills')}
+          </NavLink>
         </nav>
+        <div className={styles.sidebarFooter}>
+          <button className={styles.settingsBtn} title={t('nav.settings')}>
+            ⚙️
+          </button>
+          <span className={styles.mcpBadge} title="MCP available on stdio">MCP</span>
+        </div>
       </aside>
       <main className={styles.main}>
-        <Outlet />
+        <div className={styles.toolbar}>
+          <span className={styles.toolbarTitle}>{'组织引擎编辑器'}</span>
+        </div>
+        <div className={styles.content}>
+          <Outlet />
+        </div>
       </main>
     </div>
   );
