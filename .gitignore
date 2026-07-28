@@ -5,5 +5,7 @@ build/
 release/
 electron-pkg/
 backend-server/bundle/
+**/test-results/
+**/e2e-report/
 *.local.yaml
 .env
