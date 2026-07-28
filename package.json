@@ -1,0 +1,20 @@
+{
+  "name": "org-engine-editor",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "backend-server",
+    "frontend"
+  ],
+  "scripts": {
+    "backend": "cd backend-server && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend-server && npm test",
+    "test:frontend": "cd frontend && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
