@@ -12,10 +12,8 @@ files:
   - frontend/dist/**/*
 
 extraResources:
-  - from: dist/orchestrator-adapter/
-    to: harness/
-    filter:
-      - "**/*"
+  - from: dist/orchestrator-adapter.exe
+    to: harness/orchestrator-adapter.exe
 
 win:
   target:
