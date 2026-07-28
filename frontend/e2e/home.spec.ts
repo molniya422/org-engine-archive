@@ -5,8 +5,8 @@ test.describe('Home page', () => {
   test('loads and shows the app shell', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    // Check that at least one shell element is visible
-    const shell = page.locator('nav, header, .sidebar').first();
+    // Check that the sidebar or main content area is visible
+    const shell = page.locator('aside, main, nav').first();
     await expect(shell).toBeVisible({ timeout: 10_000 });
     // Should not show an error dialog
     await expect(page.getByText(/error/i)).toHaveCount(0, { timeout: 2_000 }).catch(() => {});
