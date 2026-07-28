@@ -1,11 +1,18 @@
 import { FastifyInstance } from 'fastify';
 import { RunManager, RunState } from './run-manager/manager';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 export function registerRunRoutes(app: FastifyInstance, runManager: RunManager): void {
+  app.get('/api/v1/runs', async () => runManager.current ?? { active: false });
+
   app.post<{ Body: { org_id: string; task: string; config_path?: string } }>('/api/v1/runs', async (req, reply) => {
     const { org_id, task, config_path } = req.body;
     if (!org_id || !task) { reply.code(400); return { error: 'org_id and task required' }; }
-    const runId = await runManager.start(org_id, task, config_path || `~/.org-engine-editor/orgs/${org_id}.yaml`, `~/.org-engine-editor/runs`);
+    const home = homedir();
+    const defaultConfigPath = join(home, '.org-engine-editor', 'orgs', `${org_id}.yaml`);
+    const defaultOutputDir = join(home, '.org-engine-editor', 'runs');
+    const runId = await runManager.start(org_id, task, config_path || defaultConfigPath, defaultOutputDir);
     reply.code(201); return { run_id: runId };
   });
   app.get<{ Params: { id: string } }>('/api/v1/runs/:id', async (req, reply) => {

@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
+import { t } from '@/i18n';
 import styles from './AppShell.module.css';
 
 export function AppShell() {
@@ -7,8 +8,8 @@ export function AppShell() {
       <aside className={styles.sidebar}>
         <div className={styles.logo}>OrgEngine</div>
         <nav className={styles.nav}>
-          <NavLink to="/" end>Home</NavLink>
-          <NavLink to="/skills">Skills</NavLink>
+          <NavLink to="/" end>{t('Home')}</NavLink>
+          <NavLink to="/skills">{t('Skills')}</NavLink>
         </nav>
       </aside>
       <main className={styles.main}>

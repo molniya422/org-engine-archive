@@ -34,3 +34,10 @@ export function deleteOrgConfig(id: string): void {
   const path = join(ensureDir(), `${id}.yaml`);
   if (existsSync(path)) unlinkSync(path);
 }
+
+/** Read the raw YAML text for an org config (for export). */
+export function readOrgConfigRaw(id: string): string | null {
+  const path = join(ensureDir(), `${id}.yaml`);
+  if (!existsSync(path)) return null;
+  return readFileSync(path, 'utf-8');
+}

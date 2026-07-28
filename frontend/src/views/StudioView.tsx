@@ -5,6 +5,10 @@ import { useUiStore } from '@/stores/ui-store';
 import { OrgTreeView } from '@/components/OrgTreeView';
 import { OrgCanvasView } from '@/components/OrgCanvasView';
 import { RoleEditor } from '@/components/RoleEditor';
+import { NewOrgForm } from '@/components/NewOrgForm';
+import { ExportMenu } from '@/components/ExportMenu';
+import { RunDialog } from '@/components/RunDialog';
+import { t } from '@/i18n';
 import styles from './StudioView.module.css';
 
 export function StudioView() {
@@ -12,6 +16,7 @@ export function StudioView() {
   const { currentOrg, loading, error, loadOrg, saveOrg } = useOrgStore();
   const { editorTab, setEditorTab } = useUiStore();
   const [selectedRole, setSelectedRole] = useState<{ deptIdx: number; roleIdx: number } | null>(null);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
 
   useEffect(() => {
     if (orgId && orgId !== 'new') loadOrg(orgId);
@@ -33,7 +38,7 @@ export function StudioView() {
   const handleAddDepartment = () => {
     if (!currentOrg) return;
     currentOrg.org.departments.push({
-      name: 'New Dept',
+      name: 'NewDept',
       roles: [{ name: 'lead', agentType: 'general-purpose', bound_skill: 'general-purpose' }],
     });
     saveOrg(orgId!, currentOrg);
@@ -42,24 +47,19 @@ export function StudioView() {
   const handleAddRole = (deptIdx: number) => {
     if (!currentOrg) return;
     currentOrg.org.departments[deptIdx].roles.push({
-      name: 'new-role',
+      name: 'new_role',
       agentType: 'general-purpose',
       bound_skill: 'general-purpose',
     });
     saveOrg(orgId!, currentOrg);
   };
 
-  if (loading) return <div className={styles.center}>Loading...</div>;
+  if (loading) return <div className={styles.center}>{t('Loading...')}</div>;
   if (error) return <div className={styles.center} style={{ color: 'var(--color-error)' }}>{error}</div>;
   if (!currentOrg && orgId === 'new') {
-    return (
-      <div className={styles.center}>
-        <p className={styles.emptyText}>Create a new organization to get started.</p>
-        <p className={styles.emptyHint}>Use the Schema tab to understand the config structure.</p>
-      </div>
-    );
+    return <NewOrgForm />;
   }
-  if (!currentOrg) return <div className={styles.center}>Organization not found</div>;
+  if (!currentOrg) return <div className={styles.center}>{t('Organization not found')}</div>;
 
   const depts = currentOrg.org?.departments ?? [];
 
@@ -71,18 +71,26 @@ export function StudioView() {
           className={`${styles.tab} ${editorTab === 'tree' ? styles.activeTab : ''}`}
           onClick={() => setEditorTab('tree')}
         >
-          Tree View
+          {t('Tree View')}
         </button>
         <button
           className={`${styles.tab} ${editorTab === 'canvas' ? styles.activeTab : ''}`}
           onClick={() => setEditorTab('canvas')}
         >
-          Canvas View
+          {t('Canvas View')}
         </button>
         <div className={styles.tabActions}>
-          <button className={styles.addBtn} onClick={handleAddDepartment}>+ Department</button>
+          {currentOrg && (
+            <ExportMenu orgId={orgId!} orgName={currentOrg.org?.name ?? orgId!} />
+          )}
+          <button className={styles.runBtn} onClick={() => setRunDialogOpen(true)}>▶ {t('Run')}</button>
+          <button className={styles.addBtn} onClick={handleAddDepartment}>{t('+ Department')}</button>
         </div>
       </div>
+
+      {currentOrg && (
+        <RunDialog orgId={orgId!} open={runDialogOpen} onClose={() => setRunDialogOpen(false)} />
+      )}
 
       {/* Main content */}
       <div className={styles.content}>
@@ -95,7 +103,11 @@ export function StudioView() {
               onAddRole={handleAddRole}
             />
           ) : (
-            <OrgCanvasView departments={depts} />
+            <OrgCanvasView
+              departments={depts}
+              selectedRole={selectedRole}
+              onRoleSelect={handleRoleSelect}
+            />
           )}
         </div>
 

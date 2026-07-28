@@ -1,6 +1,7 @@
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { t } from '@/i18n';
 import styles from './OrgTreeView.module.css';
 
 interface Role {
@@ -57,7 +58,7 @@ export function OrgTreeView({ departments, selectedRole, onRoleSelect, onAddRole
         <div key={deptIdx} className={styles.dept}>
           <div className={styles.deptHeader}>
             <span className={styles.deptName}>{dept.name}</span>
-            <button className={styles.addRoleBtn} onClick={() => onAddRole(deptIdx)}>+ Role</button>
+            <button className={styles.addRoleBtn} onClick={() => onAddRole(deptIdx)}>{t('+ Role')}</button>
           </div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={dept.roles.map((_, ri) => `role-${deptIdx}-${ri}`)} strategy={verticalListSortingStrategy}>

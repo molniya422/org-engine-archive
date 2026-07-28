@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSkillsStore } from '@/stores/skills-store';
 import { SchemaViewer } from '@/components/SchemaViewer';
+import { t } from '@/i18n';
 import styles from './SkillsView.module.css';
 
 export function SkillsView() {
@@ -15,15 +16,15 @@ export function SkillsView() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Skills & Schema</h1>
+        <h1 className={styles.title}>{t('Skills & Schema')}</h1>
       </header>
 
       <div className={styles.tabBar}>
         <button className={`${styles.tab} ${tab === 'skills' ? styles.activeTab : ''}`} onClick={() => setTab('skills')}>
-          Skills ({skills.length})
+          {t('Skills')} ({skills.length})
         </button>
         <button className={`${styles.tab} ${tab === 'schema' ? styles.activeTab : ''}`} onClick={() => setTab('schema')}>
-          Schema
+          {t('Schema')}
         </button>
       </div>
 
@@ -32,21 +33,21 @@ export function SkillsView() {
           <div className={styles.toolbar}>
             <input
               className={styles.pathInput}
-              placeholder="Extra scan path (optional)"
+              placeholder={t('Extra scan path (optional)')}
               value={extraPath}
               onChange={e => setExtraPath(e.target.value)}
             />
             <button className={styles.scanBtn} onClick={() => scanSkills(extraPath ? [extraPath] : undefined)}>
-              {loading ? 'Scanning...' : 'Rescan'}
+              {loading ? t('Scanning...') : t('Rescan')}
             </button>
           </div>
 
           {error && <div className={styles.error}>{error}</div>}
 
           {loading ? (
-            <p className={styles.loading}>Scanning skills...</p>
+            <p className={styles.loading}>{t('Scanning skills...')}</p>
           ) : skills.length === 0 ? (
-            <p className={styles.empty}>No skills found. Trigger a scan to discover available skills.</p>
+            <p className={styles.empty}>{t('No skills found. Trigger a scan to discover available skills.')}</p>
           ) : (
             <div className={styles.list}>
               {skills.map((skill, i) => (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '@/i18n';
 import styles from './GatewayPromptBlock.module.css';
 
 interface GatewayPromptBlockProps {
@@ -24,15 +25,15 @@ export function GatewayPromptBlock({ gateway, context, question, onSubmit }: Gat
   return (
     <div className={styles.block}>
       <div className={styles.header}>
-        <span className={styles.badge}>Gateway: {gateway}</span>
-        <span className={styles.label}>Awaiting Your Decision</span>
+        <span className={styles.badge}>{t('Gateway')}: {gateway}</span>
+        <span className={styles.label}>{t('Awaiting Your Decision')}</span>
       </div>
 
       <div className={styles.question}>{question}</div>
 
       {context ? (
         <details className={styles.context}>
-          <summary>Context</summary>
+          <summary>{t('Context')}</summary>
           <pre className={styles.contextPre}>{JSON.stringify(context, null, 2)}</pre>
         </details>
       ) : null}
@@ -40,13 +41,13 @@ export function GatewayPromptBlock({ gateway, context, question, onSubmit }: Gat
       <div className={styles.inputRow}>
         <input
           className={styles.input}
-          placeholder="Enter your decision or instructions..."
+          placeholder={t('Enter your decision or instructions...')}
           value={decision}
           onChange={e => setDecision(e.target.value)}
           disabled={submitting}
         />
         <button className={styles.submitBtn} onClick={handleSubmit} disabled={!decision.trim() || submitting}>
-          {submitting ? 'Sending...' : 'Submit'}
+          {submitting ? t('Sending...') : t('Submit')}
         </button>
       </div>
     </div>

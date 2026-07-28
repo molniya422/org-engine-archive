@@ -12,9 +12,14 @@ import { OrchestratorClient } from './orchestrator-adapter/client';
 import { RunManager } from './run-manager/manager';
 import { RunPersistence } from './run-manager/persistence';
 
-export async function startServer(port?: number): Promise<FastifyInstance> {
-  const app = Fastify({ logger: true });
-  const p = port ?? parseInt(process.env.PORT || '5172', 10);
+export interface ServerInfo {
+  app: FastifyInstance;
+  port: number;
+}
+
+export async function startServer(port?: number): Promise<ServerInfo> {
+  const app = Fastify({ logger: false });
+  const startPort = port ?? parseInt(process.env.PORT || '5172', 10);
 
   // Core services
   const store = new OrgConfigStore();
@@ -34,9 +39,23 @@ export async function startServer(port?: number): Promise<FastifyInstance> {
   registerRunRoutes(app, runManager);
   registerWsRoutes(app, runManager, persistence);
 
-  await app.listen({ port: p });
-  console.log(`Server on :${p}`);
-  return app;
+  // Try ports starting from startPort, increment on conflict
+  let actualPort = startPort;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    try {
+      await app.listen({ port: actualPort });
+      break;
+    } catch (err: any) {
+      if (err?.code === 'EADDRINUSE' || err?.message?.includes('EADDRINUSE')) {
+        actualPort++;
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  console.log(`Server on :${actualPort}`);
+  return { app, port: actualPort };
 }
 
 // Auto-start when run directly (dev mode)

@@ -19,6 +19,8 @@ interface RunStoreState {
   currentRun: RunState | null;
   loading: boolean;
   error: string | null;
+  logs: string[];
+  wsConnected: boolean;
   wsClient: RunWsClient;
   startRun: (orgId: string, task: string, configPath?: string) => Promise<string>;
   fetchRun: (id: string) => Promise<void>;
@@ -32,6 +34,8 @@ export const useRunStore = create<RunStoreState>((set, get) => ({
   currentRun: null,
   loading: false,
   error: null,
+  logs: [],
+  wsConnected: false,
   wsClient: new RunWsClient(),
 
   startRun: async (orgId, task, configPath) => {
@@ -86,9 +90,13 @@ export const useRunStore = create<RunStoreState>((set, get) => ({
   connectWs: (runId) => {
     const client = get().wsClient;
     client.disconnect();
+    set({ wsConnected: false, logs: [] });
     client.on((data) => {
       if (data.type === 'state_snapshot') {
-        set({ currentRun: data.state });
+        set({ currentRun: data.state, wsConnected: true });
+      } else if (data.type === 'stderr') {
+        // Capture orchestrator stderr output
+        set(s => ({ logs: [...s.logs.slice(-200), `[引擎] ${data.text}`] }));
       } else {
         // Merge event into current run state
         set(s => ({
@@ -101,13 +109,28 @@ export const useRunStore = create<RunStoreState>((set, get) => ({
             gateway: data.type === 'gateway_prompt' ? data.gateway : s.currentRun.gateway,
             updatedAt: new Date().toISOString(),
           } : null,
+          logs: data.type === 'run_completed'
+            ? [...s.logs, `[完成] ${data.status === 'success' ? '运行成功' : data.status}`]
+            : data.type === 'gateway_prompt'
+            ? [...s.logs, `[等待] 网关 ${data.gateway} 需要决策`]
+            : s.logs,
         }));
       }
     });
     client.connect(runId);
+    // Track connection state
+    const checkConn = setInterval(() => {
+      const connected = client.connected;
+      set(s => { if (s.wsConnected !== connected) return { wsConnected: connected }; return s; });
+    }, 1000);
+    // Clean up interval on next connect
+    (client as any)._checkInterval = checkConn;
   },
 
   disconnectWs: () => {
-    get().wsClient.disconnect();
+    const client = get().wsClient;
+    if ((client as any)._checkInterval) clearInterval((client as any)._checkInterval);
+    client.disconnect();
+    set({ wsConnected: false });
   },
 }));

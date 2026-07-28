@@ -51,9 +51,24 @@
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   font-weight: 500;
+  cursor: pointer;
 }
 
 .addBtn:hover { background: var(--color-primary-hover); }
+
+.runBtn {
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-success, #22c55e);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.runBtn:hover { opacity: 0.85; }
 
 .content {
   display: flex;

@@ -1,3 +1,18 @@
+let cachedPort: number | null = null;
+
+async function getWsHost(): Promise<string> {
+  if (window.location.protocol !== 'file:') {
+    // Dev mode: use browser host
+    return location.host;
+  }
+  if (cachedPort) return `localhost:${cachedPort}`;
+  try {
+    const port = await (window as any).electronAPI?.getServerPort?.();
+    if (port) { cachedPort = port; return `localhost:${port}`; }
+  } catch { /* fall through */ }
+  return 'localhost:5172';
+}
+
 type MessageHandler = (data: any) => void;
 
 export class RunWsClient {
@@ -5,9 +20,10 @@ export class RunWsClient {
   private handlers = new Set<MessageHandler>();
   private url = '';
 
-  connect(runId: string): void {
+  async connect(runId: string): Promise<void> {
     this.disconnect();
-    this.url = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/runs/${runId}`;
+    const host = await getWsHost();
+    this.url = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${host}/ws/runs/${runId}`;
     this.ws = new WebSocket(this.url);
     this.ws.onmessage = (event) => {
       try {
