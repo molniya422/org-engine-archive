@@ -7,14 +7,24 @@
     "frontend"
   ],
   "scripts": {
-    "backend": "cd backend-server && npm run dev",
-    "frontend": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend-server && npx tsx src/server.ts",
+    "frontend": "cd frontend && npx vite",
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd backend-server && npm test",
-    "test:frontend": "cd frontend && npm test"
+    "test:frontend": "cd frontend && npm test",
+    "build:harness": "pyinstaller scripts/build-harness.spec",
+    "build:backend": "esbuild backend-server/src/server.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/server.cjs",
+    "build:frontend": "cd frontend && cross-env NODE_ENV=production npx vite build",
+    "build:electron": "cd electron && npx tsc -p tsconfig.json",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:electron",
+    "package:win": "npm run build && npx electron-builder build --win"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "esbuild": "^0.24.0"
   }
 }

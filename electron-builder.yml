@@ -1,0 +1,28 @@
+appId: com.orgengine.editor
+productName: Org Engine Editor
+copyright: Copyright 2026
+
+directories:
+  output: release
+  buildResources: electron
+
+files:
+  - electron/dist/**/*
+  - backend-server/bundle/**/*
+  - frontend/dist/**/*
+
+extraResources:
+  - from: dist/orchestrator-adapter/
+    to: harness/
+    filter:
+      - "**/*"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
