@@ -1,6 +1,8 @@
 import { spawn, ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { createInterface } from 'node:readline';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { OrchestratorEvent } from './protocol';
 
 export class OrchestratorClient extends EventEmitter {
@@ -13,12 +15,22 @@ export class OrchestratorClient extends EventEmitter {
 
   async start(configPath: string, taskDescription: string, outputDir: string, cwd?: string): Promise<void> {
     if (this._active) throw new Error('Adapter already active');
-    this.process = spawn('python', [
-      '-m', 'harness.orchestrator_adapter',
-    ], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: cwd || process.env.LEAN_HOOKS_DIR || process.cwd(),
-    });
+
+    // Detect if running in a packaged Electron app
+    const resourcesPath = (process as any).resourcesPath;
+    const isPackaged = resourcesPath && existsSync(resourcesPath);
+
+    if (isPackaged) {
+      const harnessPath = join(resourcesPath, 'harness', 'orchestrator-adapter.exe');
+      this.process = spawn(harnessPath, [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } else {
+      this.process = spawn('python', ['-m', 'harness.orchestrator_adapter'], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: cwd || process.env.LEAN_HOOKS_DIR || process.cwd(),
+      });
+    }
     this.rl = createInterface({ input: this.process.stdout! });
     this.rl.on('line', (line: string) => {
       try {
