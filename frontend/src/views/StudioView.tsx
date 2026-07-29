@@ -8,6 +8,7 @@ import { RoleEditor } from '@/components/RoleEditor';
 import { NewOrgForm } from '@/components/NewOrgForm';
 import { ExportMenu } from '@/components/ExportMenu';
 import { RunDialog } from '@/components/RunDialog';
+import { WorkflowCanvas, WorkflowToolbar, PropertiesPanel, useWorkflowStore } from '@/components/workflow';
 import { t } from '@/i18n';
 import styles from './StudioView.module.css';
 
@@ -79,6 +80,12 @@ export function StudioView() {
         >
           {t('Canvas View')}
         </button>
+        <button
+          className={`${styles.tab} ${editorTab === 'workflow' ? styles.activeTab : ''}`}
+          onClick={() => setEditorTab('workflow')}
+        >
+          🔄 Workflow
+        </button>
         <div className={styles.tabActions}>
           {currentOrg && (
             <ExportMenu orgId={orgId!} orgName={currentOrg.org?.name ?? orgId!} />
@@ -93,32 +100,48 @@ export function StudioView() {
       )}
 
       {/* Main content */}
-      <div className={styles.content}>
-        <div className={styles.panel}>
-          {editorTab === 'tree' ? (
-            <OrgTreeView
-              departments={depts}
-              selectedRole={selectedRole}
-              onRoleSelect={handleRoleSelect}
-              onAddRole={handleAddRole}
-            />
-          ) : (
-            <OrgCanvasView
-              departments={depts}
-              selectedRole={selectedRole}
-              onRoleSelect={handleRoleSelect}
-            />
-          )}
+      {editorTab === 'workflow' ? (
+        <div className={styles.workflowContainer}>
+          <WorkflowToolbar />
+          <div className={styles.workflowBody}>
+            <div className={styles.workflowCanvas}>
+              <WorkflowCanvas
+                onNodeClick={(node) => useWorkflowStore.getState().setSelectedNode(node)}
+              />
+            </div>
+            <aside className={styles.workflowProperties}>
+              <PropertiesPanel />
+            </aside>
+          </div>
         </div>
+      ) : (
+        <div className={styles.content}>
+          <div className={styles.panel}>
+            {editorTab === 'tree' ? (
+              <OrgTreeView
+                departments={depts}
+                selectedRole={selectedRole}
+                onRoleSelect={handleRoleSelect}
+                onAddRole={handleAddRole}
+              />
+            ) : (
+              <OrgCanvasView
+                departments={depts}
+                selectedRole={selectedRole}
+                onRoleSelect={handleRoleSelect}
+              />
+            )}
+          </div>
 
-        <aside className={styles.editor}>
-          <RoleEditor
-            selectedRole={selectedRole}
-            departments={depts}
-            onUpdate={handleRoleUpdate}
-          />
-        </aside>
-      </div>
+          <aside className={styles.editor}>
+            <RoleEditor
+              selectedRole={selectedRole}
+              departments={depts}
+              onUpdate={handleRoleUpdate}
+            />
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

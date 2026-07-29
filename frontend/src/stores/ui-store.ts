@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type OrgEditorTab = 'tree' | 'canvas';
+type OrgEditorTab = 'tree' | 'canvas' | 'workflow';
 
 interface UiStoreState {
   sidebarCollapsed: boolean;

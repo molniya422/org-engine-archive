@@ -7,6 +7,7 @@ import { registerSkillRoutes } from './skill-scanner.routes';
 import { registerRunRoutes } from './run.routes';
 import { registerWsRoutes } from './ws-bridge/routes';
 import { registerMcpRoutes } from './mcp/routes.js';
+import { registerTemplateRoutes } from './templates/index.js';
 import { OrgConfigStore } from './org-config/store';
 import { SkillPool } from './skill-scanner/pool';
 import { OrchestratorClient } from './orchestrator-adapter/client';
@@ -40,6 +41,7 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   registerRunRoutes(app, runManager);
   registerWsRoutes(app, runManager, persistence);
   registerMcpRoutes(app);
+  registerTemplateRoutes(app);
 
   // Try ports starting from startPort, increment on conflict
   let actualPort = startPort;
