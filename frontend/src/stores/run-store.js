@@ -1,0 +1,111 @@
+import { create } from 'zustand';
+import { api } from '@/api/client';
+import { RunWsClient } from '@/api/ws';
+export const useRunStore = create((set, get) => ({
+    currentRun: null,
+    loading: false,
+    error: null,
+    logs: [],
+    wsConnected: false,
+    wsClient: new RunWsClient(),
+    startRun: async (orgId, task, configPath) => {
+        set({ loading: true, error: null });
+        try {
+            const { run_id } = await api.startRun(orgId, task, configPath);
+            // Poll for initial state
+            const state = await api.getRun(run_id);
+            set({ currentRun: state, loading: false });
+            get().connectWs(run_id);
+            return run_id;
+        }
+        catch (e) {
+            set({ error: e.message, loading: false });
+            throw e;
+        }
+    },
+    fetchRun: async (id) => {
+        set({ loading: true, error: null });
+        try {
+            const state = await api.getRun(id);
+            set({ currentRun: state, loading: false });
+        }
+        catch (e) {
+            set({ error: e.message, loading: false });
+        }
+    },
+    submitDecision: async (gateway, decision) => {
+        const { currentRun } = get();
+        if (!currentRun)
+            throw new Error('No active run');
+        set({ error: null });
+        try {
+            await api.submitDecision(currentRun.runId, gateway, decision);
+            set(s => ({ currentRun: s.currentRun ? { ...s.currentRun, status: 'running', gateway: null } : null }));
+        }
+        catch (e) {
+            set({ error: e.message });
+        }
+    },
+    cancelRun: async () => {
+        const { currentRun } = get();
+        if (!currentRun)
+            return;
+        try {
+            await api.cancelRun(currentRun.runId);
+            set(s => ({ currentRun: s.currentRun ? { ...s.currentRun, status: 'cancelled' } : null }));
+            get().disconnectWs();
+        }
+        catch (e) {
+            set({ error: e.message });
+        }
+    },
+    connectWs: (runId) => {
+        const client = get().wsClient;
+        client.disconnect();
+        set({ wsConnected: false, logs: [] });
+        client.on((data) => {
+            if (data.type === 'state_snapshot') {
+                set({ currentRun: data.state, wsConnected: true });
+            }
+            else if (data.type === 'stderr') {
+                // Capture orchestrator stderr output
+                set(s => ({ logs: [...s.logs.slice(-200), `[引擎] ${data.text}`] }));
+            }
+            else {
+                // Merge event into current run state
+                set(s => ({
+                    currentRun: s.currentRun ? {
+                        ...s.currentRun,
+                        events: [...s.currentRun.events, data],
+                        status: data.type === 'gateway_prompt' ? 'awaiting_user'
+                            : data.type === 'run_completed' ? (data.status === 'success' ? 'done' : data.status)
+                                : s.currentRun.status,
+                        gateway: data.type === 'gateway_prompt' ? data.gateway : s.currentRun.gateway,
+                        updatedAt: new Date().toISOString(),
+                    } : null,
+                    logs: data.type === 'run_completed'
+                        ? [...s.logs, `[完成] ${data.status === 'success' ? '运行成功' : data.status}`]
+                        : data.type === 'gateway_prompt'
+                            ? [...s.logs, `[等待] 网关 ${data.gateway} 需要决策`]
+                            : s.logs,
+                }));
+            }
+        });
+        client.connect(runId);
+        // Track connection state
+        const checkConn = setInterval(() => {
+            const connected = client.connected;
+            set(s => { if (s.wsConnected !== connected)
+                return { wsConnected: connected }; return s; });
+        }, 1000);
+        // Clean up interval on next connect
+        client._checkInterval = checkConn;
+    },
+    disconnectWs: () => {
+        const client = get().wsClient;
+        if (client._checkInterval)
+            clearInterval(client._checkInterval);
+        client.disconnect();
+        set({ wsConnected: false });
+    },
+}));

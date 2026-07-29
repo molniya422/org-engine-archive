@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '../api/client';
 import { t } from '../i18n';
 import styles from './HomeView.module.css';
@@ -47,97 +51,95 @@ export function HomeView() {
   }
 
   return (
-    <div className={styles.homeContainer}>
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div>
-            <h1 className={styles.headerTitle}>{t('home.title')}</h1>
-            <p className={styles.headerSubtitle}>{t('home.subtitle')}</p>
-          </div>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t('home.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('home.subtitle')}</p>
         </div>
-        <div className={styles.toolbar}>
-          <button className={styles.createBtn} onClick={() => navigate('/studio/new')}>
-            + {t('home.createOrg')}
-          </button>
-        </div>
+        <Button onClick={() => navigate('/studio/new')}>
+          + {t('home.createOrg')}
+        </Button>
       </div>
 
       {/* Active run banner */}
       {activeRun?.active && (
-        <div className={styles.runBanner}>
-          <div className={styles.runDot} />
-          <div className={styles.runInfo}>
-            <div className={styles.runTitle}>{activeRun.task}</div>
-            <div className={styles.runOrg}>{activeRun.orgId}</div>
+        <div className="flex items-center gap-4 p-4 rounded-lg border bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <span className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
+          <div className="flex-1">
+            <div className="font-medium text-sm">{activeRun.task}</div>
+            <div className="text-xs text-muted-foreground">{activeRun.orgId}</div>
           </div>
-          <button
-            className={styles.viewRunBtn}
-            onClick={() => navigate(`/run/${activeRun.runId}`)}
-          >
+          <Button size="sm" variant="outline" onClick={() => navigate(`/run/${activeRun.runId}`)}>
             {t('run.viewDetails')}
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Loading state */}
       {loading && (
-        <div className={styles.emptyState}>
-          <p>{t('common.loading')}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
         </div>
       )}
 
       {/* Empty state */}
       {!loading && orgs.length === 0 && (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>🏢</div>
-          <h2 className={styles.emptyTitle}>{t('home.emptyTitle')}</h2>
-          <p className={styles.emptyDesc}>{t('home.emptyDesc')}</p>
-          <button className={styles.createBtn} onClick={() => navigate('/studio/new')}>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="text-5xl mb-4">🏢</div>
+          <h2 className="text-xl font-semibold mb-2">{t('home.emptyTitle')}</h2>
+          <p className="text-sm text-muted-foreground mb-6 max-w-md">{t('home.emptyDesc')}</p>
+          <Button onClick={() => navigate('/studio/new')}>
             + {t('home.createOrg')}
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Org grid */}
       {orgs.length > 0 && (
         <>
-          <div className={styles.orgGrid}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {orgs.map((org) => (
-              <div
+              <Card
                 key={org.id}
-                className={styles.orgCard}
+                className="cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => navigate(`/studio/${org.id}`)}
               >
-                <h3 className={styles.orgName}>{org.name}</h3>
-                <p className={styles.orgMeta}>
-                  {org.deptCount} departments · {org.roleCount} roles
-                </p>
-                <div className={styles.orgBadges}>
-                  <span className={styles.badge}>
-                    📁 {org.deptCount} depts
-                  </span>
-                  <span className={styles.badge}>
-                    👤 {org.roleCount} roles
-                  </span>
-                </div>
-              </div>
+                <CardHeader>
+                  <CardTitle className="text-base">{org.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {org.deptCount} departments · {org.roleCount} roles
+                  </p>
+                  <div className="flex gap-2">
+                    <Badge variant="secondary">📁 {org.deptCount} depts</Badge>
+                    <Badge variant="secondary">👤 {org.roleCount} roles</Badge>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
 
           {/* Quick actions */}
-          <div className={styles.quickActions}>
-            <div className={styles.actionCard} onClick={() => navigate('/studio/new')}>
-              <div className={styles.actionIcon}>➕</div>
-              <p className={styles.actionLabel}>{t('home.createOrg')}</p>
-              <p className={styles.actionDesc}>{t('home.createOrgDesc')}</p>
-            </div>
-            <div className={styles.actionCard} onClick={() => navigate('/skills')}>
-              <div className={styles.actionIcon}>🔧</div>
-              <p className={styles.actionLabel}>{t('nav.skills')}</p>
-              <p className={styles.actionDesc}>{t('home.skillsDesc')}</p>
-            </div>
-            <div
-              className={styles.actionCard}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/studio/new')}>
+              <CardContent className="flex flex-col items-center py-6 text-center">
+                <div className="text-2xl mb-2">➕</div>
+                <p className="font-medium text-sm">{t('home.createOrg')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('home.createOrgDesc')}</p>
+              </CardContent>
+            </Card>
+            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/skills')}>
+              <CardContent className="flex flex-col items-center py-6 text-center">
+                <div className="text-2xl mb-2">🔧</div>
+                <p className="font-medium text-sm">{t('nav.skills')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('home.skillsDesc')}</p>
+              </CardContent>
+            </Card>
+            <Card
+              className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={async () => {
                 if (orgs.length > 0) {
                   try {
@@ -148,10 +150,12 @@ export function HomeView() {
                 }
               }}
             >
-              <div className={styles.actionIcon}>📋</div>
-              <p className={styles.actionLabel}>{t('export.copy')}</p>
-              <p className={styles.actionDesc}>{t('home.exportDesc')}</p>
-            </div>
+              <CardContent className="flex flex-col items-center py-6 text-center">
+                <div className="text-2xl mb-2">📋</div>
+                <p className="font-medium text-sm">{t('export.copy')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('home.exportDesc')}</p>
+              </CardContent>
+            </Card>
           </div>
         </>
       )}

@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSkillsStore } from '@/stores/skills-store';
 import { SchemaViewer } from '@/components/SchemaViewer';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { t } from '@/i18n';
-import styles from './SkillsView.module.css';
 
 export function SkillsView() {
   const { skills, loading, error, fetchSkills, scanSkills } = useSkillsStore();
@@ -14,60 +19,74 @@ export function SkillsView() {
   }, [fetchSkills]);
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{t('Skills & Schema')}</h1>
+    <div className="p-6 space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold">{t('Skills & Schema')}</h1>
       </header>
 
-      <div className={styles.tabBar}>
-        <button className={`${styles.tab} ${tab === 'skills' ? styles.activeTab : ''}`} onClick={() => setTab('skills')}>
-          {t('Skills')} ({skills.length})
-        </button>
-        <button className={`${styles.tab} ${tab === 'schema' ? styles.activeTab : ''}`} onClick={() => setTab('schema')}>
-          {t('Schema')}
-        </button>
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as 'skills' | 'schema')}>
+        <TabsList>
+          <TabsTrigger value="skills">{t('Skills')} ({skills.length})</TabsTrigger>
+          <TabsTrigger value="schema">{t('Schema')}</TabsTrigger>
+        </TabsList>
 
-      {tab === 'skills' ? (
-        <div className={styles.skillsPanel}>
-          <div className={styles.toolbar}>
-            <input
-              className={styles.pathInput}
+        <TabsContent value="skills" className="space-y-4">
+          <div className="flex gap-3 items-center">
+            <Input
+              className="max-w-sm"
               placeholder={t('Extra scan path (optional)')}
               value={extraPath}
-              onChange={e => setExtraPath(e.target.value)}
+              onChange={(e) => setExtraPath(e.target.value)}
             />
-            <button className={styles.scanBtn} onClick={() => scanSkills(extraPath ? [extraPath] : undefined)}>
+            <Button onClick={() => scanSkills(extraPath ? [extraPath] : undefined)} disabled={loading}>
               {loading ? t('Scanning...') : t('Rescan')}
-            </button>
+            </Button>
           </div>
 
-          {error && <div className={styles.error}>{error}</div>}
+          {error && (
+            <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">{error}</div>
+          )}
 
           {loading ? (
-            <p className={styles.loading}>{t('Scanning skills...')}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
+                  <CardContent><Skeleton className="h-4 w-full" /></CardContent>
+                </Card>
+              ))}
+            </div>
           ) : skills.length === 0 ? (
-            <p className={styles.empty}>{t('No skills found. Trigger a scan to discover available skills.')}</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-lg mb-2">{t('No skills found')}</p>
+              <p className="text-sm">{t('Trigger a scan to discover available skills.')}</p>
+            </div>
           ) : (
-            <div className={styles.list}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {skills.map((skill, i) => (
-                <div key={i} className={styles.card}>
-                  <div className={styles.cardHeader}>
-                    <span className={styles.skillName}>{skill.name}</span>
-                    <span className={`${styles.source} ${skill.source === 'skill' ? styles.sourceSkill : styles.sourceType}`}>
-                      {skill.source}
-                    </span>
-                  </div>
-                  <p className={styles.skillDesc}>{skill.description}</p>
-                  {skill.path && <span className={styles.skillPath}>{skill.path}</span>}
-                </div>
+                <Card key={i}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm">{skill.name}</CardTitle>
+                      <Badge variant={skill.source === 'skill' ? 'default' : 'secondary'}>
+                        {skill.source}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-xs mb-2">{skill.description}</CardDescription>
+                    {skill.path && <p className="text-[10px] text-muted-foreground truncate">{skill.path}</p>}
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
-        </div>
-      ) : (
-        <SchemaViewer />
-      )}
+        </TabsContent>
+
+        <TabsContent value="schema">
+          <SchemaViewer />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
