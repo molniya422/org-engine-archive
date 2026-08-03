@@ -1,4 +1,4 @@
-version: "1.0"
+version: "2.0"
 org:
   name: default-org
   description: "Default organization configuration for org-engine"
@@ -7,103 +7,89 @@ org:
       description: "Cross-cutting technical decisions, contract first-drafting, risk"
       required: true
       roles:
-        - name: architect
+        - id: arch.architect
+          name: architect
           agentType: general-purpose
-          bound_skill: design-patterns
-          can_veto: true
-          can_escalate: true
-        - name: integrator
+          bound_skills: [design-patterns]
+          permissions:
+            can_veto: true
+            can_escalate: true
+        - id: arch.integrator
+          name: integrator
           agentType: general-purpose
-          bound_skill: pathfinder
-          can_escalate: true
-      manager_pipeline:
-        - name: decompose
-          agentType: general-purpose
-          bound_skill: pathfinder
-        - name: dispatch
-          agentType: general-purpose
-          bound_skill: dispatching-parallel-agents
-        - name: collect
-          agentType: general-purpose
-          bound_skill: summarize
-        - name: review
-          agentType: general-purpose
-          bound_skill: requesting-code-review
+          bound_skills: [pathfinder]
+          permissions:
+            can_escalate: true
 
     - name: FE
       description: "UI / Client implementation"
       required: true
       roles:
-        - name: fe_page_builder
+        - id: fe.fe_page_builder
+          name: fe_page_builder
           agentType: general-purpose
-          bound_skill: taste-skill
-        - name: fe_ui_system
+          bound_skills: [taste-skill]
+        - id: fe.fe_ui_system
+          name: fe_ui_system
           agentType: general-purpose
-          bound_skill: stitch-skill
+          bound_skills: [stitch-skill]
 
     - name: BE
       description: "Services / data / business logic"
       required: true
       roles:
-        - name: implementer
+        - id: be.implementer
+          name: implementer
           agentType: general-purpose
-          bound_skill: test-driven-development
+          bound_skills: [test-driven-development]
 
     - name: QA
       description: "Cross-department quality gate, acceptance criteria"
       required: true
       roles:
-        - name: reviewer
+        - id: qa.reviewer
+          name: reviewer
           agentType: general-purpose
-          bound_skill: pr-review
-          can_veto: true
-          can_escalate: true
-        - name: tester
+          bound_skills: [pr-review]
+          permissions:
+            can_veto: true
+            can_escalate: true
+        - id: qa.tester
+          name: tester
           agentType: general-purpose
-          bound_skill: verification-before-completion
-          can_escalate: true
+          bound_skills: [verification-before-completion]
+          permissions:
+            can_escalate: true
 
     - name: Docs
       description: "User / API / architecture doc authoring"
       required: true
       roles:
-        - name: docs_author
+        - id: docs.docs_author
+          name: docs_author
           agentType: general-purpose
-          bound_skill: elements-of-style:writing-clearly-and-concisely
+          bound_skills: [elements-of-style:writing-clearly-and-concisely]
 
     - name: Sec
       description: "Security review, permission model, dependency audit"
       required: false
       roles:
-        - name: security_auditor
+        - id: sec.security_auditor
+          name: security_auditor
           agentType: general-purpose
-          bound_skill: security-guardian
-          can_veto: true
-          can_escalate: true
+          bound_skills: [security-guardian]
+          permissions:
+            can_veto: true
+            can_escalate: true
 
     - name: Design
       description: "Design systems, visual consistency"
       required: false
       roles:
-        - name: designer
+        - id: design.designer
+          name: designer
           agentType: general-purpose
-          bound_skill: design-is
-
-  contracts:
-    - key: api-spec
-      owner_dept: Arch
-      version: 1
-      schema:
-        type: object
-        properties: {}
-      dependents:
-        - Arch
-        - FE
-        - BE
-        - QA
-        - Docs
-        - Sec
-        - Design
+          bound_skills: [design-is]
 
 budget:
   max_depth: 3

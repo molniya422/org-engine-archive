@@ -16,8 +16,8 @@ describe('Validator', () => {
   it('rejects config with empty name', () => {
     const v = new Validator();
     const result = v.validateRaw({
-      version: '1.0',
-      org: { name: '', departments: [{ name: 'Arch', roles: [{ name: 'lead', agentType: 'gp', bound_skill: 'x' }] }] },
+      version: '2.0',
+      org: { name: '', departments: [{ name: 'Arch', roles: [{ id: 'arch.lead', name: 'lead', agentType: 'gp', bound_skills: ['x'] }] }] },
       budget: {}
     });
     expect(result.valid).toBe(false);
@@ -26,15 +26,15 @@ describe('Validator', () => {
 
   it('rejects config with missing departments', () => {
     const v = new Validator();
-    const result = v.validateRaw({ version: '1.0', org: { name: 'test' }, budget: {} });
+    const result = v.validateRaw({ version: '2.0', org: { name: 'test' }, budget: {} });
     expect(result.valid).toBe(false);
   });
 
   it('rejects role with uppercase name pattern violation', () => {
     const v = new Validator();
     const result = v.validateRaw({
-      version: '1.0',
-      org: { name: 'test', departments: [{ name: 'Arch', roles: [{ name: 'Tech_Lead', agentType: 'gp', bound_skill: 'x' }] }] },
+      version: '2.0',
+      org: { name: 'test', departments: [{ name: 'Arch', roles: [{ id: 'arch.tech_lead', name: 'Tech_Lead', agentType: 'gp', bound_skills: ['x'] }] }] },
       budget: {}
     });
     expect(result.valid).toBe(false);
