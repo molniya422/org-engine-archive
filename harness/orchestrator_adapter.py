@@ -22,6 +22,7 @@ from harness.organization_orchestrator import (
     ChannelVerdict,
 )
 from harness.org_config_loader import load_org_config
+from harness.workflow_config_loader import load_workflow_config
 
 
 class OrchestratorAdapter:
@@ -49,6 +50,7 @@ class OrchestratorAdapter:
         self._state: str = "idle"
         self._task: str = ""
         self._departments: list[str] = []
+        self._workflow: dict | None = None
         self._gateway_context: dict | None = None
         self._running: bool = True
 
@@ -67,6 +69,22 @@ class OrchestratorAdapter:
         )
         sys.stdout.write(msg + "\n")
         sys.stdout.flush()
+
+    # ------------------------------------------------------------------
+    # workflow v2 event emission helpers
+    # ------------------------------------------------------------------
+
+    def emit_meeting_started(self, meeting: dict) -> None:
+        self.emit_event('meeting_started', meeting=meeting)
+
+    def emit_meeting_cycle(self, meeting: dict) -> None:
+        self.emit_event('meeting_cycle', meeting=meeting)
+
+    def emit_message_mediated(self, message: dict) -> None:
+        self.emit_event('message_mediated', message=message)
+
+    def emit_decision_recorded(self, decision: dict) -> None:
+        self.emit_event('decision_recorded', decision=decision)
 
     # ------------------------------------------------------------------
     # Request dispatch
@@ -106,6 +124,16 @@ class OrchestratorAdapter:
             states_dir = Path(params.get("output_dir", ".")) / "states"
             states_dir.mkdir(parents=True, exist_ok=True)
             self._orch = OrganizationOrchestrator(states_dir=states_dir)
+
+            # Optional: workflow-config v2 (structure / comm / meetings)。
+            # configure_workflow 由后续任务在 OrganizationOrchestrator 上定义；
+            # 用 hasattr 防御式调用，保证未升级的旧引擎不加载 workflow 也能跑。
+            self._workflow = None
+            workflow_path = params.get("workflow_path")
+            if workflow_path:
+                self._workflow = load_workflow_config(workflow_path)
+                if hasattr(self._orch, "configure_workflow"):
+                    self._orch.configure_workflow(self._workflow)
 
             # Determine departments from config —
             # start with required_core, fall back to all departments.
