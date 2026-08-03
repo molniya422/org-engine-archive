@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '@/api/client';
 import { t } from '@/i18n';
-import styles from './ExportMenu.module.css';
 
 interface ExportMenuProps {
   orgId: string;
@@ -71,25 +70,25 @@ python -m harness.orchestrator_adapter \\
 # 或者在编辑器内使用 "▶ 运行" 按钮（推荐）`;
 
   return (
-    <div className={styles.wrapper} ref={menuRef}>
-      <button className={styles.trigger} onClick={() => setOpen(o => !o)} disabled={status === 'loading'}>
+    <div className="relative inline-block" ref={menuRef}>
+      <button className="px-3 py-1.5 text-sm border rounded hover:bg-accent" onClick={() => setOpen(o => !o)} disabled={status === 'loading'}>
         {status === 'copied' ? statusText : status === 'loading' ? '...' : t('Export')} ▾
       </button>
 
       {open && (
-        <div className={styles.menu}>
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>📄 下载文件</div>
-            <button className={styles.item} onClick={() => download('yaml')}>下载 YAML</button>
-            <button className={styles.item} onClick={() => download('json')}>下载 JSON</button>
+        <div className="absolute right-0 mt-1 bg-card border rounded shadow-lg p-2 min-w-[280px] z-50">
+          <div className="mb-2">
+            <div className="text-xs font-semibold text-muted-foreground px-1 py-1">📄 下载文件</div>
+            <button className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded" onClick={() => download('yaml')}>下载 YAML</button>
+            <button className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded" onClick={() => download('json')}>下载 JSON</button>
           </div>
 
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>📋 复制到剪贴板</div>
-            <button className={styles.item} onClick={() => copy(configPath, '路径')}>
+          <div className="mb-2">
+            <div className="text-xs font-semibold text-muted-foreground px-1 py-1">📋 复制到剪贴板</div>
+            <button className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded" onClick={() => copy(configPath, '路径')}>
               复制配置文件路径
             </button>
-            <button className={styles.item} onClick={async () => {
+            <button className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded" onClick={async () => {
               const text = await api.exportOrg(orgId, 'yaml');
               copy(text, 'YAML');
             }}>
@@ -97,21 +96,21 @@ python -m harness.orchestrator_adapter \\
             </button>
           </div>
 
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>🤖 Claude Code 集成</div>
-            <div className={styles.deployHint}>
+          <div className="mb-2">
+            <div className="text-xs font-semibold text-muted-foreground px-1 py-1">🤖 Claude Code 集成</div>
+            <div className="text-xs text-muted-foreground px-1">
               <p>配置文件已自动保存到：</p>
-              <code className={styles.blockCode}>{configPath}</code>
+              <code className="block bg-muted rounded p-1 text-xs font-mono mt-1">{configPath}</code>
 
               <p style={{ marginTop: 10 }}>在 Claude Code 中运行编排：</p>
-              <pre className={styles.pre}>
+              <pre className="bg-muted rounded p-2 overflow-x-auto text-xs">
                 <code>python -m harness.orchestrator_adapter \
   --org-config "{configPath}" \
   --task "你的任务描述"</code>
               </pre>
 
               <p style={{ marginTop: 10 }}>或通过编辑器一键运行（推荐）：</p>
-              <ul className={styles.ul}>
+              <ul className="list-disc pl-4 space-y-1">
                 <li>打开组织编辑器</li>
                 <li>点击 <strong>▶ 运行</strong> 按钮</li>
                 <li>输入任务描述即可启动</li>
@@ -123,10 +122,10 @@ python -m harness.orchestrator_adapter \\
             </div>
           </div>
 
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>📁 文件位置</div>
-            <div className={styles.deployHint}>
-              配置文件存储位置：<code className={styles.blockCode}>{configPath}</code>
+          <div className="mb-2">
+            <div className="text-xs font-semibold text-muted-foreground px-1 py-1">📁 文件位置</div>
+            <div className="text-xs text-muted-foreground px-1">
+              配置文件存储位置：<code className="block bg-muted rounded p-1 text-xs font-mono mt-1">{configPath}</code>
               编辑器启动运行时，编排引擎会自动读取此文件。
             </div>
           </div>
@@ -134,7 +133,7 @@ python -m harness.orchestrator_adapter \\
       )}
 
       {status === 'error' && (
-        <div className={styles.toast}>{statusText || '操作失败'}</div>
+        <div className="absolute bottom-0 right-0 bg-destructive text-destructive-foreground text-sm px-3 py-1 rounded shadow">{statusText || '操作失败'}</div>
       )}
     </div>
   );

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { t } from '@/i18n';
-import styles from './GatewayPromptBlock.module.css';
 
 interface GatewayPromptBlockProps {
   gateway: string;
@@ -23,30 +22,30 @@ export function GatewayPromptBlock({ gateway, context, question, onSubmit }: Gat
   };
 
   return (
-    <div className={styles.block}>
-      <div className={styles.header}>
-        <span className={styles.badge}>{t('Gateway')}: {gateway}</span>
-        <span className={styles.label}>{t('Awaiting Your Decision')}</span>
+    <div className="border rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded">{t('Gateway')}: {gateway}</span>
+        <span className="text-xs text-muted-foreground">{t('Awaiting Your Decision')}</span>
       </div>
 
-      <div className={styles.question}>{question}</div>
+      <div className="text-sm font-medium">{question}</div>
 
       {context ? (
-        <details className={styles.context}>
+        <details className="text-sm">
           <summary>{t('Context')}</summary>
-          <pre className={styles.contextPre}>{JSON.stringify(context, null, 2)}</pre>
+          <pre className="bg-muted p-2 rounded text-xs overflow-x-auto mt-1">{JSON.stringify(context, null, 2)}</pre>
         </details>
       ) : null}
 
-      <div className={styles.inputRow}>
+      <div className="flex gap-2">
         <input
-          className={styles.input}
+          className="flex-1 border rounded px-3 py-1.5 text-sm"
           placeholder={t('Enter your decision or instructions...')}
           value={decision}
           onChange={e => setDecision(e.target.value)}
           disabled={submitting}
         />
-        <button className={styles.submitBtn} onClick={handleSubmit} disabled={!decision.trim() || submitting}>
+        <button className="px-4 py-1.5 bg-primary text-primary-foreground text-sm rounded hover:bg-primary/90 disabled:opacity-50" onClick={handleSubmit} disabled={!decision.trim() || submitting}>
           {submitting ? t('Sending...') : t('Submit')}
         </button>
       </div>

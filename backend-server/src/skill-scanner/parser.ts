@@ -10,7 +10,8 @@ export function parseSkillMetadata(filePath: string, content: string): SkillMeta
   try {
     const fm = parseSimpleYaml(match[1]);
     if (!fm.name || typeof fm.name !== 'string') return null;
-    return { name: fm.name, description: fm.description ?? '', path: filePath };
+    const description = typeof fm.description === 'string' ? fm.description : '';
+    return { name: fm.name, description, path: filePath };
   } catch { return null; }
 }
 

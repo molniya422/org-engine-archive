@@ -7,6 +7,16 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   type: WorkflowNodeType;
 }
 
+/**
+ * 节点到组织结构的绑定引用。由 generateFromOrg 写入，
+ * 用于把工作流节点对应回 org.departments 的具体部门/角色。
+ */
+export interface OrgRef {
+  kind: 'department' | 'role';
+  deptIdx: number;
+  roleIdx?: number;
+}
+
 export interface AgentNodeData extends WorkflowNodeData {
   type: 'agent';
   role: string;

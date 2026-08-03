@@ -1,19 +1,24 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { Zap } from 'lucide-react';
 import type { ParallelNodeData } from '../types';
+import NodeDeleteButton from './NodeDeleteButton';
 
-type Props = { data: ParallelNodeData; selected?: boolean };
+type Props = { data: ParallelNodeData; selected?: boolean; id?: string };
 
-function ParallelNode({ data, selected }: Props) {
+function ParallelNode({ data, selected, id }: Props) {
+  const branchCount = data.branches?.length || 0;
+  const strategy = data.mergeStrategy === 'all' ? '全部完成' : '任一完成';
   return (
-    <div className={`px-4 py-3 rounded-lg border-2 shadow-sm bg-white dark:bg-gray-800 min-w-[160px] ${selected ? 'border-purple-500 ring-2 ring-purple-200' : 'border-gray-200 dark:border-gray-700'}`}>
-      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-purple-500 border-2 border-white" />
+    <div className={`group relative px-4 py-3 rounded-md border-2 bg-card min-w-[160px] ${selected ? 'border-accent ring-1 ring-accent/30' : 'border-border'}`}>
+      {id && <NodeDeleteButton nodeId={id} />}
+      <Handle type="target" position={Position.Top} className="w-2.5 h-2.5 !bg-accent border-2 border-background" />
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">⚡</span>
-        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Parallel</span>
+        <Zap size={14} className="text-accent" />
+        <span className="font-display text-[13px] font-medium">并行</span>
       </div>
-      <div className="text-xs text-gray-500 dark:text-gray-400">{data.branches?.length || 0} branches · {data.mergeStrategy}</div>
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-purple-500 border-2 border-white" />
+      <div className="text-[11px] text-muted-foreground font-mono">{branchCount} 个分支 · {strategy}</div>
+      <Handle type="source" position={Position.Bottom} className="w-2.5 h-2.5 !bg-accent border-2 border-background" />
     </div>
   );
 }

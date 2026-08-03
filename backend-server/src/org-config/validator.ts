@@ -1,8 +1,11 @@
 import Ajv, { ErrorObject } from 'ajv';
 import addFormats from 'ajv-formats';
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { parse } from 'yaml';
+
+// In esbuild CJS bundle, __dirname is auto-provided; fallback to cwd for dev mode
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
 export interface ValidationResult {
   valid: boolean;
@@ -14,7 +17,8 @@ export class Validator {
   private validate: ReturnType<Ajv['compile']>;
 
   constructor(schemaPath?: string) {
-    this.ajv = new Ajv({ allErrors: true, useDefaults: true, validateSchema: false });
+    // unicodeRegExp:true lets org.name use \p{L}/\p{N} so CJK org names validate
+    this.ajv = new Ajv({ allErrors: true, useDefaults: true, validateSchema: false, unicodeRegExp: true });
     addFormats(this.ajv);
 
     // Try to find schema relative to project root
@@ -24,6 +28,8 @@ export class Validator {
       const candidates = [
         join(cwd, 'schema', 'org-config.schema.json'),
         join(cwd, '..', 'schema', 'org-config.schema.json'),
+        // Relative to bundled server.cjs location (packaged Electron app)
+        join(currentDir, '../../schema/org-config.schema.json'),
       ];
       // Also check packaged Electron app resources
       const resourcesPath = (process as any).resourcesPath;

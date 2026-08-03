@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type OrgEditorTab = 'tree' | 'canvas' | 'workflow';
+type OrgEditorTab = 'structure' | 'workflow' | 'skills' | 'validation' | 'run';
 
 interface UiStoreState {
   sidebarCollapsed: boolean;
@@ -12,7 +12,7 @@ interface UiStoreState {
 
 export const useUiStore = create<UiStoreState>((set) => ({
   sidebarCollapsed: false,
-  editorTab: 'tree',
+  editorTab: 'structure',
   theme: 'light',
   toggleSidebar: () => set(s => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setEditorTab: (tab) => set({ editorTab: tab }),

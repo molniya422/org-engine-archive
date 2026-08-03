@@ -1,11 +1,11 @@
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { parseSkillMetadata, SkillMeta } from './parser';
 
 export const BUILTIN_AGENT_TYPES = [
   'general-purpose', 'Explore', 'Plan', 'code-reviewer',
-  'statusline-setup',
+  'statusline-setup', 'sonnet', 'opus', 'haiku', 'fable',
 ];
 
 export interface ScanResult {
@@ -14,10 +14,50 @@ export interface ScanResult {
   errors: { path: string; reason: string }[];
 }
 
+// ── Persisted scan paths ──────────────────────────────────────────────────
+// The packaged app restarts the backend on every launch, so any path added via
+// "Rescan" was previously lost. Persist to ~/.org-engine-editor/settings.json.
+const SETTINGS_DIR = join(homedir(), '.org-engine-editor');
+const SETTINGS_FILE = join(SETTINGS_DIR, 'settings.json');
+
+export function loadPersistedSkillPaths(): string[] {
+  try {
+    if (!existsSync(SETTINGS_FILE)) return [];
+    const raw = JSON.parse(readFileSync(SETTINGS_FILE, 'utf-8'));
+    return Array.isArray(raw?.skill_paths)
+      ? raw.skill_paths.filter((p: unknown): p is string => typeof p === 'string')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function persistSkillPaths(paths: string[]): void {
+  try {
+    if (!existsSync(SETTINGS_DIR)) mkdirSync(SETTINGS_DIR, { recursive: true });
+    const merged = Array.from(new Set([...loadPersistedSkillPaths(), ...paths]));
+    writeFileSync(SETTINGS_FILE, JSON.stringify({ skill_paths: merged }, null, 2), 'utf-8');
+  } catch {
+    /* best-effort persistence */
+  }
+}
+
+function splitEnvPaths(): string[] {
+  return (process.env.OE_SKILL_PATHS || '')
+    .split(/[;,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export function scanSkills(extraPaths: string[] = []): ScanResult {
   const skills: SkillMeta[] = [];
   const errors: { path: string; reason: string }[] = [];
-  const scanDirs = [join(homedir(), '.claude', 'skills'), ...extraPaths].filter(p => existsSync(p) && statSync(p).isDirectory());
+  const scanDirs = Array.from(new Set([
+    join(homedir(), '.claude', 'skills'),
+    ...splitEnvPaths(),
+    ...loadPersistedSkillPaths(),
+    ...extraPaths,
+  ])).filter((p) => existsSync(p) && statSync(p).isDirectory());
   const seenNames = new Set<string>();
 
   for (const dir of scanDirs) {

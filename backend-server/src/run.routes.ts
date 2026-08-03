@@ -1,10 +1,53 @@
 import { FastifyInstance } from 'fastify';
 import { RunManager, RunState } from './run-manager/manager';
+import { RunPersistence } from './run-manager/persistence';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { readFile, stat } from 'node:fs/promises';
 
-export function registerRunRoutes(app: FastifyInstance, runManager: RunManager): void {
-  app.get('/api/v1/runs', async () => runManager.current ?? { active: false });
+export function registerRunRoutes(app: FastifyInstance, runManager: RunManager, persistence?: RunPersistence): void {
+  app.get('/api/v1/runs', async (req) => {
+    const url = new URL(req.url, 'http://localhost');
+    const orgId = url.searchParams.get('org_id');
+    const limit = parseInt(url.searchParams.get('limit') ?? '10', 10);
+
+    // If no org_id: return current active run (legacy compat)
+    if (!orgId) return runManager.current ?? { active: false };
+
+    // List runs for org_id by scanning ~/.org-engine-editor/runs
+    const home = homedir();
+    const runsDir = join(home, '.org-engine-editor', 'runs');
+    try {
+      await stat(runsDir);
+    } catch {
+      return { runs: [] };
+    }
+
+    const { readdir } = await import('node:fs/promises');
+    const entries = await readdir(runsDir);
+    const matches: any[] = [];
+    for (const entry of entries) {
+      const statePath = join(runsDir, entry, 'state.json');
+      try {
+        await stat(statePath);
+        const raw = await readFile(statePath, 'utf-8');
+        const state = JSON.parse(raw);
+        if (state.orgId === orgId) {
+          matches.push({
+            runId: state.runId,
+            orgId: state.orgId,
+            task: state.task,
+            status: state.status,
+            startedAt: state.startedAt,
+            endedAt: state.endedAt,
+          });
+        }
+      } catch { /* skip corrupt */ }
+    }
+
+    matches.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+    return { runs: matches.slice(0, limit) };
+  });
 
   app.post<{ Body: { org_id: string; task: string; config_path?: string } }>('/api/v1/runs', async (req, reply) => {
     const { org_id, task, config_path } = req.body;

@@ -20,7 +20,7 @@ export function TemplateCard({ template, onApply }: TemplateCardProps) {
       <CardHeader>
         <CardTitle className="text-sm flex items-center gap-2">
           {template.name}
-          {template.builtIn && <Badge variant="secondary" className="text-[10px]">built-in</Badge>}
+          {template.builtIn && <Badge variant="muted" className="text-[10px]">built-in</Badge>}
         </CardTitle>
         <CardDescription className="text-xs line-clamp-2">{template.description}</CardDescription>
       </CardHeader>

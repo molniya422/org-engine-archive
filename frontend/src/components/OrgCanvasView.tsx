@@ -16,7 +16,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';
-import styles from './OrgCanvasView.module.css';
 
 interface Department { name: string; roles: { name: string; agentType: string; bound_skill: string }[] }
 
@@ -32,9 +31,9 @@ const ROLE_NODE_HEIGHT = 44;
 
 function DeptNode({ data }: NodeProps) {
   return (
-    <div className={styles.deptNode} style={{ width: NODE_WIDTH }}>
+    <div className="bg-card border rounded px-3 py-2 text-center text-sm font-medium shadow-sm" style={{ width: NODE_WIDTH }}>
       <Handle type="source" position={Position.Bottom} />
-      <div className={styles.deptLabel}>{data.label as string}</div>
+      <div className="">{data.label as string}</div>
     </div>
   );
 }
@@ -42,12 +41,12 @@ function DeptNode({ data }: NodeProps) {
 function RoleNode({ data }: NodeProps) {
   return (
     <div
-      className={`${styles.roleNode} ${data.isSelected ? styles.roleSelected : ''}`}
+      className={`bg-background border rounded px-2 py-1.5 text-center text-xs shadow-sm cursor-pointer hover:bg-accent ${data.isSelected ? 'border-primary bg-accent' : ''}`}
       style={{ width: NODE_WIDTH }}
     >
       <Handle type="target" position={Position.Top} />
-      <div className={styles.roleName}>{data.label as string}</div>
-      <div className={styles.roleType}>{data.agentType as string}</div>
+      <div className="text-xs font-medium">{data.label as string}</div>
+      <div className="text-[10px] text-muted-foreground">{data.agentType as string}</div>
     </div>
   );
 }
@@ -131,7 +130,7 @@ export function OrgCanvasView({ departments, selectedRole, onRoleSelect }: OrgCa
   }, [onRoleSelect]);
 
   return (
-    <div className={styles.canvas}>
+    <div className="w-full h-[500px]">
       <ReactFlow
         nodes={nodes}
         edges={edges}

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api, ApiError } from '@/api/client';
+import { toast } from '@/stores/toast-store';
 
 export interface OrgMeta {
   id: string;
@@ -51,7 +52,9 @@ export const useOrgStore = create<OrgStoreState>((set) => ({
       await api.saveOrg(id, data);
       set({ currentOrg: data });
     } catch (e) {
-      set({ error: (e as ApiError).message });
+      const msg = (e as ApiError).message || '保存失败';
+      set({ error: msg });
+      toast.error(msg);
       throw e;
     }
   },
@@ -62,7 +65,9 @@ export const useOrgStore = create<OrgStoreState>((set) => ({
       await api.deleteOrg(id);
       set(s => ({ orgs: s.orgs.filter(o => o.id !== id), currentOrg: s.currentOrg?.id === id ? null : s.currentOrg }));
     } catch (e) {
-      set({ error: (e as ApiError).message });
+      const msg = (e as ApiError).message || '删除失败';
+      set({ error: msg });
+      toast.error(msg);
     }
   },
 }));

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { t } from '@/i18n';
-import styles from './SchemaViewer.module.css';
 
 // Inline simplified schema display extracted from the JSON Schema
 // In production this would fetch the schema from the backend
@@ -56,29 +55,29 @@ export function SchemaViewer() {
   const toggle = (title: string) => setExpanded(s => ({ ...s, [title]: !s[title] }));
 
   return (
-    <div className={styles.viewer}>
-      <p className={styles.hint}>
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
         {t('The OrgConfig follows the JSON Schema at')} <code>schema/org-config.schema.json</code>.
         {t('Below is a readable summary of the key fields.')}
       </p>
 
       {SCHEMA_SECTIONS.map(section => (
-        <div key={section.title} className={styles.section}>
-          <button className={styles.sectionHeader} onClick={() => toggle(section.title)}>
-            <span className={styles.arrow}>{expanded[section.title] ? '▼' : '▶'}</span>
-            <span className={styles.sectionTitle}>{section.title}</span>
+        <div key={section.title} className="border rounded">
+          <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-accent" onClick={() => toggle(section.title)}>
+            <span className="text-xs text-muted-foreground">{expanded[section.title] ? '▼' : '▶'}</span>
+            <span className="text-sm font-medium">{section.title}</span>
           </button>
 
           {expanded[section.title] && (
-            <div className={styles.fields}>
+            <div className="border-t divide-y px-3 py-2 space-y-2">
               {section.fields.map(field => (
-                <div key={field.name} className={styles.field}>
-                  <div className={styles.fieldTop}>
-                    <code className={styles.fieldName}>{field.name}</code>
-                    <span className={styles.fieldType}>{field.type}</span>
-                    {field.required && <span className={styles.required}>{t('required')}</span>}
+                <div key={field.name} className="py-1">
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs font-mono">{field.name}</code>
+                    <span className="text-xs text-muted-foreground">{field.type}</span>
+                    {field.required && <span className="text-xs text-destructive">{t('required')}</span>}
                   </div>
-                  <p className={styles.fieldDesc}>{field.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{field.description}</p>
                 </div>
               ))}
             </div>

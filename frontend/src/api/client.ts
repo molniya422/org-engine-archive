@@ -2,14 +2,39 @@
 // In Electron (file:// protocol), proxy doesn't exist — hit backend directly
 let cachedPort: number | null = null;
 
+const DEBUG =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' ||
+    (window as any).__OE_DEBUG__ === true ||
+    localStorage.getItem('oe-debug') === '1');
+
+function dbg(...args: unknown[]) {
+  if (!DEBUG) return;
+  // eslint-disable-next-line no-console
+  console.log('[oe-api]', ...args);
+}
+
 async function getBaseUrl(): Promise<string> {
-  if (window.location.protocol !== 'file:') return '';
-  if (cachedPort) return `http://localhost:${cachedPort}`;
+  if (window.location.protocol !== 'file:') {
+    dbg('baseUrl: relative (http/dev)', window.location.href);
+    return '';
+  }
+  if (cachedPort) {
+    dbg('baseUrl: cached', cachedPort);
+    return `http://localhost:${cachedPort}`;
+  }
   // Try to get the actual port from Electron preload API
   try {
     const port = await (window as any).electronAPI?.getServerPort?.();
-    if (port) { cachedPort = port; return `http://localhost:${port}`; }
-  } catch { /* fall through */ }
+    dbg('baseUrl: ipc port', port, 'electronAPI?', !!(window as any).electronAPI);
+    if (port) {
+      cachedPort = port;
+      return `http://localhost:${port}`;
+    }
+  } catch (e) {
+    dbg('baseUrl: ipc failed', e);
+  }
+  dbg('baseUrl: fallback 5172');
   return 'http://localhost:5172';
 }
 
@@ -22,21 +47,48 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const base = await getBaseUrl();
-  const res = await fetch(`${base}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-  });
+  const url = `${base}${path}`;
+  dbg('request →', options?.method ?? 'GET', url);
+  const method = (options?.method ?? 'GET').toUpperCase();
+  // Only set Content-Type when a body is actually being sent — DELETE/GET
+  // without a body otherwise trips Fastify's body-parser with FST_ERR_CTP_EMPTY_JSON_BODY.
+  const hasBody = options?.body != null && options.body !== '';
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+  if (hasBody && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
+  let res: Response;
+  try {
+    res = await fetch(url, { ...options, method, headers });
+  } catch (e: any) {
+    dbg('request network error', path, e?.message ?? e);
+    const msg = e?.name === 'AbortError'
+      ? `请求超时：${path}`
+      : `无法连接到后端服务（${path}）。请确认后端是否运行。`;
+    throw new ApiError(0, msg);
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
+    dbg('request http error', res.status, path, body);
     throw new ApiError(res.status, body.error ?? res.statusText);
   }
-  return res.json();
+  const data = await res.json();
+  dbg('request ←', path, Array.isArray(data) ? `array(${data.length})` : typeof data);
+  return data;
 }
 
 /** Fetch raw text (for export/download). */
 async function requestText(path: string): Promise<string> {
   const base = await getBaseUrl();
-  const res = await fetch(`${base}${path}`);
+  const url = `${base}${path}`;
+  dbg('requestText →', url);
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new ApiError(0, `无法连接到后端服务（${path}）。请确认后端是否运行。`);
+  }
   if (!res.ok) throw new ApiError(res.status, res.statusText);
   return res.text();
 }
@@ -66,6 +118,8 @@ export const api = {
 
   // Runs
   getActiveRun: () => request<any>('/api/v1/runs'),
+  listRuns: (orgId: string, limit = 10) =>
+    request<{ runs: any[] }>(`/api/v1/runs?org_id=${encodeURIComponent(orgId)}&limit=${limit}`),
   startRun: (orgId: string, task: string, configPath?: string) =>
     request<{ run_id: string }>('/api/v1/runs', {
       method: 'POST',
@@ -79,4 +133,26 @@ export const api = {
     }),
   cancelRun: (runId: string) =>
     request<any>(`/api/v1/runs/${runId}/cancel`, { method: 'POST' }),
+
+  // Health
+  getHealth: () => request<any>('/api/v1/health/details'),
+  getOrgWorkflowStats: (orgId: string) =>
+    request<any>(`/api/v1/orgs/${encodeURIComponent(orgId)}/workflow/stats`),
+
+  // Templates
+  listTemplates: (category?: string) =>
+    request<any[]>(`/api/v1/templates${category && category !== 'all' ? `?category=${category}` : ''}`),
+  getTemplate: (id: string) =>
+    request<any>(`/api/v1/templates/${id}`),
+
+  // Playbooks
+  listPlaybooks: (category?: string) =>
+    request<any[]>(`/api/v1/playbooks${category && category !== 'all' ? `?category=${category}` : ''}`),
+  getPlaybook: (id: string) =>
+    request<any>(`/api/v1/playbooks/${id}`),
+  applyPlaybook: (id: string, mode: string, params: Record<string, unknown>, orgId?: string) =>
+    request<any>(`/api/v1/playbooks/${id}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ mode, params, orgId }),
+    }),
 };

@@ -1,30 +1,41 @@
 import { memo } from 'react';
-import { Handle, Position, type Node } from '@xyflow/react';
-import type { AgentNodeData } from '../types';
+import { Handle, Position } from '@xyflow/react';
+import { User, Building2 } from 'lucide-react';
+import type { AgentNodeData, OrgRef } from '../types';
+import NodeDeleteButton from './NodeDeleteButton';
 
-type Props = { data: AgentNodeData; selected?: boolean };
+type Props = { data: AgentNodeData; selected?: boolean; id?: string };
 
-function AgentNode({ data, selected }: Props) {
+function AgentNode({ data, selected, id }: Props) {
+  const orgRef = data.orgRef as OrgRef | undefined;
   return (
     <div
-      className={`px-4 py-3 rounded-lg border-2 shadow-sm bg-white dark:bg-gray-800 min-w-[180px] ${
-        selected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 dark:border-gray-700'
+      className={`group relative px-4 py-3 rounded-md border-2 bg-card min-w-[180px] ${
+        selected
+          ? 'border-accent ring-1 ring-accent/30'
+          : 'border-border'
       }`}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-blue-500 border-2 border-white" />
+      {id && <NodeDeleteButton nodeId={id} />}
+      <Handle type="target" position={Position.Top} className="w-2.5 h-2.5 !bg-accent border-2 border-background" />
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">👤</span>
-        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{data.role || 'Agent'}</span>
+        <User size={14} className="text-accent" />
+        <span className="font-display text-[13px] font-medium">{data.role || '智能体'}</span>
+        {orgRef && (
+          <span className="flex items-center gap-0.5 rounded-sm bg-muted px-1 py-0.5 text-[9px] font-mono text-muted-foreground" title={orgRef.kind === 'role' ? `组织角色 D${orgRef.deptIdx + 1}R${(orgRef.roleIdx ?? 0) + 1}` : `组织部门 D${orgRef.deptIdx + 1}`}>
+            <Building2 size={9} /> {orgRef.kind === 'role' ? `D${orgRef.deptIdx + 1}R${(orgRef.roleIdx ?? 0) + 1}` : `D${orgRef.deptIdx + 1}`}
+          </span>
+        )}
       </div>
-      <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[160px]">
-        {data.goal?.slice(0, 60) || 'No goal set'}
+      <div className="text-[11px] text-muted-foreground truncate max-w-[160px] font-mono">
+        {data.goal?.slice(0, 60) || '未设置目标'}
       </div>
       <div className="flex gap-1 mt-2 flex-wrap">
         {data.skills?.slice(0, 3).map((s: string) => (
-          <span key={s} className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded text-[10px]">{s}</span>
+          <span key={s} className="px-1.5 py-0.5 bg-accent/10 text-accent rounded-sm text-[10px] font-mono">{s}</span>
         ))}
       </div>
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-blue-500 border-2 border-white" />
+      <Handle type="source" position={Position.Bottom} className="w-2.5 h-2.5 !bg-accent border-2 border-background" />
     </div>
   );
 }

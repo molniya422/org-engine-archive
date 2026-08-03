@@ -8,6 +8,9 @@ import { registerRunRoutes } from './run.routes';
 import { registerWsRoutes } from './ws-bridge/routes';
 import { registerMcpRoutes } from './mcp/routes.js';
 import { registerTemplateRoutes } from './templates/index.js';
+import { registerPlaybookRoutes } from './playbooks/routes.js';
+import './playbooks/built-in/index';
+import { registerHealthRoutes } from './health/routes.js';
 import { OrgConfigStore } from './org-config/store';
 import { SkillPool } from './skill-scanner/pool';
 import { OrchestratorClient } from './orchestrator-adapter/client';
@@ -42,6 +45,11 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   registerWsRoutes(app, runManager, persistence);
   registerMcpRoutes(app);
   registerTemplateRoutes(app);
+  registerPlaybookRoutes(app);
+  registerHealthRoutes(app);
+
+  // Expose store to health route via app decorator (typed)
+  (app as any)._orgStore = store;
 
   // Try ports starting from startPort, increment on conflict
   let actualPort = startPort;

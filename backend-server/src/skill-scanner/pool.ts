@@ -1,4 +1,4 @@
-import { scanSkills, BUILTIN_AGENT_TYPES } from './scanner';
+import { scanSkills, BUILTIN_AGENT_TYPES, loadPersistedSkillPaths, persistSkillPaths } from './scanner';
 import type { SkillMeta } from './parser';
 
 export interface SkillPoolEntry {
@@ -10,9 +10,19 @@ export interface SkillPoolEntry {
 
 export class SkillPool {
   private cache: SkillPoolEntry[] | null = null;
-  private extraPaths: string[] = [];
+  private extraPaths: string[];
 
-  addScanPath(path: string): void { this.extraPaths.push(path); this.cache = null; }
+  constructor() {
+    // Seed with persisted + env-configured paths so GET /skills works across restarts
+    const envPaths = (process.env.OE_SKILL_PATHS || '')
+      .split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+    this.extraPaths = Array.from(new Set([...loadPersistedSkillPaths(), ...envPaths]));
+  }
+
+  addScanPath(path: string): void { if (!this.extraPaths.includes(path)) this.extraPaths.push(path); this.cache = null; }
+
+  /** Persist the current path list so a Rescan survives the next app launch. */
+  persist(): void { persistSkillPaths(this.extraPaths); }
 
   scan(): SkillPoolEntry[] {
     if (this.cache) return this.cache;

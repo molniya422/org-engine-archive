@@ -19,7 +19,7 @@ export function SkillsView() {
   }, [fetchSkills]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="h-full overflow-y-auto p-6 space-y-6">
       <header>
         <h1 className="text-2xl font-bold">{t('Skills & Schema')}</h1>
       </header>
@@ -68,7 +68,7 @@ export function SkillsView() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm">{skill.name}</CardTitle>
-                      <Badge variant={skill.source === 'skill' ? 'default' : 'secondary'}>
+                      <Badge variant={skill.source === 'skill' ? 'default' : 'muted'}>
                         {skill.source}
                       </Badge>
                     </div>

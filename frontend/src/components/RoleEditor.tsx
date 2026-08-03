@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { t } from '@/i18n';
 import { useSkillsStore } from '@/stores/skills-store';
-import styles from './RoleEditor.module.css';
 
 interface Role {
   name: string;
@@ -49,9 +48,9 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
 
   if (!selectedRole || !localRole) {
     return (
-      <div className={styles.panel}>
-        <h3 className={styles.title}>{t('Role Editor')}</h3>
-        <p className={styles.hint}>{t('Select a role from the tree to edit its properties.')}</p>
+      <div className="border rounded-lg p-4 space-y-4">
+        <h3 className="text-lg font-semibold">{t('Role Editor')}</h3>
+        <p className="text-sm text-muted-foreground">{t('Select a role from the tree to edit its properties.')}</p>
       </div>
     );
   }
@@ -62,19 +61,19 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
     onUpdate(updated);
   };
 
-  // Unique skill names from scanned skills, plus current value if not in list
-  const skillOptions = Array.from(new Set(skills.map(s => s.name))).sort();
+  // Unique SKILL names only — exclude agentType pool entries that share this list
+  const skillOptions = Array.from(new Set(skills.filter(s => s.source === 'skill').map(s => s.name))).sort();
   if (localRole.bound_skill && !skillOptions.includes(localRole.bound_skill)) {
     skillOptions.unshift(localRole.bound_skill);
   }
 
   return (
-    <div className={styles.panel}>
-      <h3 className={styles.title}>{t('Edit Role')}</h3>
-      <div className={styles.field}>
-        <label className={styles.label}>{t('Name')}</label>
+    <div className="border rounded-lg p-4 space-y-4">
+      <h3 className="text-lg font-semibold">{t('Edit Role')}</h3>
+      <div className="space-y-1">
+        <label className="text-sm font-medium">{t('Name')}</label>
         <input
-          className={styles.input}
+          className="w-full border rounded px-3 py-1.5 text-sm"
           value={localRole.name}
           onChange={e => handleChange('name', e.target.value)}
           list="role-name-suggestions"
@@ -92,10 +91,10 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
           <option value="docs_author" />
         </datalist>
       </div>
-      <div className={styles.field}>
-        <label className={styles.label}>{t('Agent Type')}</label>
+      <div className="space-y-1">
+        <label className="text-sm font-medium">{t('Agent Type')}</label>
         <select
-          className={styles.select}
+          className="w-full border rounded px-3 py-1.5 text-sm"
           value={localRole.agentType}
           onChange={e => handleChange('agentType', e.target.value)}
         >
@@ -104,11 +103,11 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
           ))}
         </select>
       </div>
-      <div className={styles.field}>
-        <label className={styles.label}>{t('Bound Skill')}</label>
-        <div className={styles.comboRow}>
+      <div className="space-y-1">
+        <label className="text-sm font-medium">{t('Bound Skill')}</label>
+        <div className="flex gap-2">
           <select
-            className={styles.select}
+            className="w-full border rounded px-3 py-1.5 text-sm"
             value={skillOptions.includes(localRole.bound_skill) ? localRole.bound_skill : '__custom__'}
             onChange={e => {
               if (e.target.value !== '__custom__') handleChange('bound_skill', e.target.value);
@@ -121,7 +120,7 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
           </select>
           {!skillOptions.includes(localRole.bound_skill) && (
             <input
-              className={styles.comboInput}
+              className="flex-1 border rounded px-3 py-1.5 text-sm"
               value={localRole.bound_skill}
               onChange={e => handleChange('bound_skill', e.target.value)}
               placeholder="输入自定义技能名称"
@@ -130,9 +129,9 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
         </div>
       </div>
       {localRole.context_note !== undefined && (
-        <div className={styles.field}>
-          <label className={styles.label}>{t('Context Note')}</label>
-          <textarea className={styles.textarea} value={localRole.context_note} onChange={e => handleChange('context_note', e.target.value)} />
+        <div className="space-y-1">
+          <label className="text-sm font-medium">{t('Context Note')}</label>
+          <textarea className="w-full border rounded px-3 py-1.5 text-sm" value={localRole.context_note} onChange={e => handleChange('context_note', e.target.value)} />
         </div>
       )}
     </div>

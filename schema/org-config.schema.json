@@ -9,7 +9,7 @@
       "type": "object",
       "required": ["name", "departments"],
       "properties": {
-        "name": { "type": "string", "pattern": "^[a-zA-Z0-9_-]{1,64}$" },
+        "name": { "type": "string", "pattern": "^[\\p{L}\\p{N}_-]{1,64}$" },
         "description": { "type": "string", "maxLength": 500 },
         "departments": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/department" } },
         "contracts": { "type": "array", "items": { "$ref": "#/$defs/contract" } }

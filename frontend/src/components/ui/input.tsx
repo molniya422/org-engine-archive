@@ -3,12 +3,23 @@ import { cn } from '@/lib/utils';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
+/**
+ * Input — Industrial compact.
+ * Notes (a11y from taste-skill 4.5):
+ *   - WCAG AA contrast for placeholder + value text on bg (placeholder uses muted-foreground, value uses foreground)
+ *   - Focus ring uses ice-blue accent
+ *   - 2px chrome top-edge for consistency with Card
+ */
 const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type, ...props }, ref) => {
   return (
     <input
       type={type}
       className={cn(
-        'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-9 w-full rounded-sm border border-border bg-background px-3 py-2 chrome-hairline',
+        'font-mono text-[12.5px] leading-none',
+        'placeholder:text-muted-foreground/70',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       ref={ref}

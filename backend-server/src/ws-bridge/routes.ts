@@ -16,6 +16,6 @@ export function registerWsRoutes(app: FastifyInstance, runManager: RunManager, p
       runManager.removeListener('event', onEvent);
       runManager.removeListener('stderr', onStderr);
     });
-    socket.on('error', (err) => app.log.error(err, 'WebSocket error'));
+    socket.on('error', (err: Error) => app.log.error(err, 'WebSocket error'));
   });
 }

@@ -17,7 +17,9 @@ a = Analysis(
     # Search paths for imports
     pathex=[str(lean_hooks)],
     binaries=[],
-    datas=[],
+    datas=[
+        (str(lean_hooks / 'harness' / 'role-registry-org.yaml'), 'harness'),
+    ],
     hiddenimports=['yaml'],
     hookspath=[],
     hooksconfig={},

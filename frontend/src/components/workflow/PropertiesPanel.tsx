@@ -1,150 +1,266 @@
+import { useEffect } from 'react';
 import { useWorkflowStore } from '@/stores/workflow-store';
+import { useSkillsStore } from '@/stores/skills-store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { MousePointerClick, X, Trash2, Building2 } from 'lucide-react';
+
+const TYPE_LABEL: Record<string, string> = {
+  agent: '智能体',
+  skill: '技能',
+  decision: '决策',
+  parallel: '并行',
+};
+
+const KNOWN_TYPES = ['agent', 'skill', 'decision', 'parallel'] as const;
 
 export function PropertiesPanel() {
-  const { selectedNode, updateNodeData, setSelectedNode } = useWorkflowStore();
+  const { selectedNode, updateNodeData, setSelectedNode, removeNodeById } = useWorkflowStore();
+  const { skills, fetchSkills } = useSkillsStore();
+
+  // 加载当前技能库，供「技能」下拉选择使用
+  useEffect(() => {
+    fetchSkills();
+  }, [fetchSkills]);
 
   if (!selectedNode) {
     return (
-      <div className="p-6 text-sm text-gray-400 dark:text-gray-500 text-center">
-        <div className="text-2xl mb-2">👆</div>
-        Select a node on the canvas to edit its properties
-      </div>
+      <div className="p-6 text-[12.5px] text-muted-foreground text-center">
+        <div className="mb-3 flex justify-center">
+          <MousePointerClick size={22} className="text-muted-foreground/50" />
+       </div>
+        选择画布上的节点以编辑属性
+     </div>
     );
   }
 
-  const data = selectedNode.data as Record<string, unknown>;
+  const data = (selectedNode.data ?? {}) as Record<string, unknown>;
+  const dataType = data.type as string | undefined;
+  const orgRef = data.orgRef as { kind?: string; deptIdx?: number; roleIdx?: number } | undefined;
 
   const updateField = (field: string, value: unknown) => {
     updateNodeData(selectedNode.id, { [field]: value });
   };
 
+  // 解析类型显示：如果在白名单内则显示中文标签，否则显示原始值或"未知"
+  const typeDisplay = (() => {
+    if (!dataType) return '未知';
+    return TYPE_LABEL[dataType] ?? dataType;
+  })();
+
+  const isKnownType = KNOWN_TYPES.includes(dataType as typeof KNOWN_TYPES[number]);
+
   return (
     <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">Properties</h3>
-        <Button variant="ghost" size="sm" onClick={() => setSelectedNode(null)} className="h-6 w-6 p-0">
-          ✕
-        </Button>
-      </div>
-      <div>
-        <Label className="text-xs font-medium">Type</Label>
-        <div className="mt-1">
-          <Badge variant="outline" className="capitalize">
-            {(data.type as string) || 'unknown'}
-          </Badge>
+        <h3 className="font-display text-sm font-medium">节点属性</h3>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { removeNodeById(selectedNode.id); setSelectedNode(null); }}
+            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+            title="删除此节点"
+          >
+            <Trash2 size={13} />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedNode(null)} className="h-6 w-6">
+            <X size={13} />
+          </Button>
         </div>
       </div>
-      {(data.type as string) === 'agent' && (
+
+      <div>
+        <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">类型</Label>
+        <div className="mt-1 flex items-center gap-2">
+          <Badge variant="outline">{typeDisplay}</Badge>
+          {!isKnownType && (
+            <span className="text-[10px] text-amber-500 font-mono">未识别的类型</span>
+          )}
+       </div>
+     </div>
+
+      {orgRef?.deptIdx !== undefined && (
+        <div className="rounded-sm border border-border bg-muted/30 px-2.5 py-2">
+          <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">组织绑定</Label>
+          <p className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-accent">
+            <Building2 size={12} />
+            {orgRef.kind === 'role'
+              ? `部门 D${orgRef.deptIdx + 1} · 角色 R${(orgRef.roleIdx ?? 0) + 1}`
+              : `部门 D${orgRef.deptIdx + 1}`}
+          </p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            此节点由组织结构生成，删除/修改不影响 org 配置。
+          </p>
+        </div>
+      )}
+
+      {/* Agent 编辑器 */}
+      {dataType === 'agent' && (
         <>
           <div>
-            <Label className="text-xs font-medium">Role</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">角色</Label>
             <Input
               value={(data.role as string) || ''}
               onChange={(e) => updateField('role', e.target.value)}
               className="mt-1"
-              placeholder="e.g. Researcher"
+              placeholder="如：研究员"
             />
-          </div>
+         </div>
           <div>
-            <Label className="text-xs font-medium">Goal</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">目标</Label>
             <textarea
-              className="mt-1 w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="mt-1 w-full min-h-[60px] rounded-sm border border-input bg-background px-3 py-2 font-mono text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
               value={(data.goal as string) || ''}
               onChange={(e) => updateField('goal', e.target.value)}
-              placeholder="What should this agent do?"
+              placeholder="该智能体应完成什么任务？"
             />
-          </div>
+         </div>
           <div>
-            <Label className="text-xs font-medium">Backstory</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">背景</Label>
             <textarea
-              className="mt-1 w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="mt-1 w-full min-h-[60px] rounded-sm border border-input bg-background px-3 py-2 font-mono text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
               value={(data.backstory as string) || ''}
               onChange={(e) => updateField('backstory', e.target.value)}
-              placeholder="Agent background context"
+              placeholder="智能体的背景上下文"
             />
-          </div>
+         </div>
           <div>
-            <Label className="text-xs font-medium">LLM</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">模型</Label>
             <Input
               value={(data.llm as string) || ''}
               onChange={(e) => updateField('llm', e.target.value)}
               className="mt-1"
               placeholder="default"
             />
-          </div>
+         </div>
           <div>
-            <Label className="text-xs font-medium">Skills</Label>
-            <Input
-              value={(data.skills as string[])?.join(', ') || ''}
-              onChange={(e) => updateField('skills', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
-              className="mt-1"
-              placeholder="skill1, skill2"
-            />
-            <p className="text-[10px] text-gray-400 mt-1">Comma-separated skill names</p>
-          </div>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">技能</Label>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {(data.skills as string[] | undefined)?.map((s) => (
+                <span key={s} className="inline-flex items-center gap-1 rounded-sm bg-accent/10 text-accent px-1.5 py-0.5 text-[11px] font-mono">
+                  {s}
+                  <button
+                    type="button"
+                    className="hover:text-destructive"
+                    title="移除技能"
+                    onClick={() => updateField('skills', ((data.skills as string[]) || []).filter((x) => x !== s))}
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+              {((data.skills as string[] | undefined) ?? []).length === 0 && (
+                <span className="text-[11px] text-muted-foreground">未绑定技能</span>
+              )}
+            </div>
+            <Select
+              value=""
+              onValueChange={(v) => {
+                const current = (data.skills as string[] | undefined) ?? [];
+                if (v && !current.includes(v)) updateField('skills', [...current, v]);
+              }}
+            >
+              <SelectTrigger className="mt-1.5 h-8 text-[12px]">
+                <SelectValue placeholder="从技能库选择技能…" />
+              </SelectTrigger>
+              <SelectContent>
+                {skills.length === 0 && (
+                  <div className="px-2 py-1.5 text-[11px] text-muted-foreground">技能库为空，请先到「技能」页扫描</div>
+                )}
+                {Array.from(new Set(skills.filter((s) => s.source === 'skill').map((s) => s.name))).sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">从当前技能库下拉选择，可添加多个</p>
+         </div>
         </>
       )}
-      {(data.type as string) === 'skill' && (
+
+      {/* Skill 编辑器 */}
+      {dataType === 'skill' && (
         <>
           <div>
-            <Label className="text-xs font-medium">Skill ID</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">技能 ID</Label>
             <Input
               value={(data.skillId as string) || ''}
               onChange={(e) => updateField('skillId', e.target.value)}
               className="mt-1"
               placeholder="web-search"
             />
-          </div>
+         </div>
           <div>
-            <Label className="text-xs font-medium">Timeout (s)</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">超时 (秒)</Label>
             <Input
               type="number"
               value={String((data.timeout as number) || 60)}
               onChange={(e) => updateField('timeout', parseInt(e.target.value) || 60)}
               className="mt-1"
             />
-          </div>
+         </div>
         </>
       )}
-      {(data.type as string) === 'decision' && (
+
+      {/* Decision 编辑器 */}
+      {dataType === 'decision' && (
         <div>
-          <Label className="text-xs font-medium">Condition</Label>
+          <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">条件</Label>
           <Input
             value={(data.condition as string) || ''}
             onChange={(e) => updateField('condition', e.target.value)}
             className="mt-1"
-            placeholder="e.g. results.length > 0"
+            placeholder="如：results.length > 0"
           />
-          <p className="text-[10px] text-gray-400 mt-1">
-            True branch: bottom port · False branch: right port
-          </p>
-        </div>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            满足：底端口 · 不满足：右端口
+         </p>
+       </div>
       )}
-      {(data.type as string) === 'parallel' && (
+
+      {/* Parallel 编辑器 */}
+      {dataType === 'parallel' && (
         <>
           <div>
-            <Label className="text-xs font-medium">Branches</Label>
-            <p className="text-sm text-muted-foreground mt-1">
-              Connect multiple nodes from the bottom port to create branches
-            </p>
-          </div>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">分支</Label>
+            <p className="text-[12px] text-muted-foreground mt-1">
+              从底端口连接多个节点以创建分支
+           </p>
+         </div>
           <div>
-            <Label className="text-xs font-medium">Merge Strategy</Label>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">合并策略</Label>
             <select
-              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-1 flex h-10 w-full rounded-sm border border-input bg-background px-3 py-2 text-[12.5px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
               value={(data.mergeStrategy as string) || 'all'}
               onChange={(e) => updateField('mergeStrategy', e.target.value)}
             >
-              <option value="all">All (wait for all)</option>
-              <option value="any">Any (first complete)</option>
-            </select>
-          </div>
+              <option value="all">全部完成 (等待所有)</option>
+              <option value="any">任一完成 (首个即可)</option>
+           </select>
+         </div>
         </>
       )}
-    </div>
+
+      {/* 回退显示：data.type 缺失或不在白名单中时显示原始数据 */}
+      {!isKnownType && (
+        <div>
+          <p className="text-[12px] text-muted-foreground">
+            此节点类型（{dataType ?? '未指定'}）缺少专用编辑器。以下为节点原始数据：
+         </p>
+          <pre className="mt-2 text-[11px] font-mono text-muted-foreground max-h-[240px] overflow-auto rounded-sm border border-border bg-muted/30 p-2 whitespace-pre-wrap break-all">
+            {JSON.stringify(data, null, 2)}
+         </pre>
+       </div>
+      )}
+   </div>
   );
 }
