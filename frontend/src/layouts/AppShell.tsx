@@ -17,6 +17,7 @@ import {
   ArrowLeft,
   CalendarDays,
   Radar,
+  KeyRound,
 } from 'lucide-react';
 
 /**
@@ -60,6 +61,7 @@ export function AppShell() {
     { to: '/skills', end: false, icon: Cpu, label: t('nav.skills') },
     { to: '/meetings', end: false, icon: CalendarDays, label: '会议记录' },
     { to: '/comm', end: false, icon: Radar, label: '通信审计' },
+    { to: '/products', end: false, icon: KeyRound, label: '产物注册表' },
   ];
 
   return (

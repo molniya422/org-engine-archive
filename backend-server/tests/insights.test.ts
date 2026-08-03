@@ -23,11 +23,11 @@ describe('insights', () => {
     expect(r.comm[0].verdict).toBe('allow');
   });
 
-  it('reads products.json', () => {
+  it('reads products.jsonl', () => {
     const dir = mkdtempSync(join(tmpdir(), 'insights-'));
-    writeFileSync(join(dir, 'products.json'), JSON.stringify([{ role: 'arch', key: 'k1' }]));
+    writeFileSync(join(dir, 'products.jsonl'), JSON.stringify({ kind: 'allow', role: 'arch', key: 'k1' }) + '\n');
     const r = readInsights(dir);
-    expect(r.products).toEqual([{ role: 'arch', key: 'k1' }]);
+    expect(r.products).toEqual([{ kind: 'allow', role: 'arch', key: 'k1' }]);
   });
 
   it('tolerates malformed JSONL lines', () => {

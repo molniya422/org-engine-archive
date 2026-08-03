@@ -8,6 +8,7 @@ import { HealthView } from './views/HealthView';
 import { PlaybookLibrary } from './components/playbook/PlaybookLibrary';
 import { MeetingsView } from './views/MeetingsView';
 import { CommAuditView } from './views/CommAuditView';
+import { ProductRegistryView } from './views/ProductRegistryView';
 
 /**
  * MUST use HashRouter for Electron packaged builds.
@@ -26,6 +27,7 @@ export const router = createHashRouter([
       { path: 'skills', element: <SkillsView /> },
       { path: 'meetings', element: <MeetingsView /> },
       { path: 'comm', element: <CommAuditView /> },
+      { path: 'products', element: <ProductRegistryView /> },
       { path: 'health', element: <HealthView /> },
       { path: 'templates', element: <PlaybookLibrary /> },
       { path: '*', element: <Navigate to="/" replace /> },

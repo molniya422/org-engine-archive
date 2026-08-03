@@ -1,7 +1,7 @@
 // insights.routes.ts
 // 治理洞察查询端点：会议记录 / 通信审计 / 产物注册表。
 // 数据来自引擎运行时落盘的状态文件（~/.org-engine-editor/state/）：
-//   meetings.jsonl / comm.jsonl / products.json
+//   meetings.jsonl / comm.jsonl / products.jsonl
 import { FastifyInstance } from 'fastify';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,10 +31,7 @@ export function readInsights(stateDir: string): Insights {
   out.meetings = jsonl('meetings.jsonl');
   out.comm = jsonl('comm.jsonl');
 
-  const pp = join(stateDir, 'products.json');
-  if (existsSync(pp)) {
-    try { out.products = JSON.parse(readFileSync(pp, 'utf-8')); } catch { /* empty/corrupt */ }
-  }
+  out.products = jsonl('products.jsonl');
   return out;
 }
 
