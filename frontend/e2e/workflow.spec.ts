@@ -82,6 +82,33 @@ test.describe('Workflow Editor', () => {
     await page.goto('/#/');
     await expect(page.locator('nav button[title*="模式"]')).toBeVisible({ timeout: 5000 });
   });
+
+  // ── workflow v2: 会议节点 / 频道节点 / 消息边 / 强绑定 ──
+  test('should show meeting and channel palette items', async ({ page }) => {
+    await page.locator('button:has-text("工作流")').first().click();
+    await expect(page.getByText('会议', { exact: true }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('频道', { exact: true }).first()).toBeVisible();
+  });
+
+  test('should offer message-edge connection mode', async ({ page }) => {
+    await page.locator('button:has-text("工作流")').first().click();
+    // 连接模式下拉：流程边(value=flow) / 消息边(value=message)
+    const modeSelect = page.locator('select').first();
+    await expect(modeSelect).toBeVisible({ timeout: 5000 });
+    await expect(modeSelect.locator('option[value="message"]')).toHaveText('消息边');
+  });
+
+  test('should show role_ref selector and binding check for agent nodes', async ({ page }) => {
+    await page.locator('button:has-text("工作流")').first().click();
+    await expect(page.locator('[data-testid="workflow-canvas"]')).toBeVisible({ timeout: 5000 });
+    await page.locator('button:has-text("从组织生成")').click();
+    await page.waitForSelector('.react-flow__node', { timeout: 5000 });
+    await page.locator('.react-flow__node').first().click();
+    // 强绑定：role_ref 下拉（org 角色注册表）
+    await expect(page.getByText('组织角色 (role_ref)').first()).toBeVisible({ timeout: 5000 });
+    // 强绑定校验面板（引用完整性 + 环检测）
+    await expect(page.getByText('强绑定校验').first()).toBeVisible();
+  });
 });
 
 test.describe('Workflow Editor — CJK org name', () => {
