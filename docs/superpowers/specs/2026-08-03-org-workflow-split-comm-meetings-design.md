@@ -85,7 +85,10 @@ nodes:
     type: meeting                     # 新增：会议
     meeting:
       type: ministerial               # dept_internal | ministerial | decision
-      participants: { from: managers }  # 或显式角色 ID 列表
+      participants:
+        from: managers                # 来源枚举：department | managers | exec_roles | explicit
+        department: Arch              # from=department 时指定部门；from=exec_roles 时可选 roles 列表
+        roles: []                     # from=explicit 时填角色 ID 列表
       channel: api-design
       agenda: "敲定 API 契约"
       output: { write_to: [channel, flow] }
