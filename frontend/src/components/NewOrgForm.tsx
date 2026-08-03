@@ -19,28 +19,23 @@ function sanitizeOrgName(raw: string): string {
 }
 
 /**
- * 完整 org-engine 组织结构原型（对齐 examples/default-org.yaml）：
- * L1 审议 → L2 部门拆分/主管会议（manager_pipeline）→ L3 执行者（role + bound_skill）→ 汇集审计 → 三关口。
+ * 完整 org-engine 组织结构原型（org-config v2.0 纯角色注册表）：
+ * 角色只承载身份（id/agentType/bound_skills/persona/permissions）；
+ * 结构（部门拆分/通信/会议）全部移交 workflow 侧，org 不再含 manager_pipeline/contracts。
  */
 const DEFAULT_ORG_TEMPLATE = {
-  version: '1.0',
+  version: '2.0',
   org: {
     name: '',
-    description: 'org-engine 组织（L1 审议 → L2 部门拆分 → L3 执行者 → 汇集审计 → 三关口）',
+    description: 'org-engine 组织（角色注册表 v2.0：身份/技能/权限，结构搭建见 workflow）',
     departments: [
       {
         name: 'Arch',
         description: 'Cross-cutting technical decisions, contract first-drafting, risk',
         required: true,
         roles: [
-          { name: 'architect', agentType: 'general-purpose', bound_skill: 'design-patterns', can_veto: true, can_escalate: true },
-          { name: 'integrator', agentType: 'general-purpose', bound_skill: 'pathfinder', can_escalate: true },
-        ],
-        manager_pipeline: [
-          { name: 'decompose', agentType: 'general-purpose', bound_skill: 'pathfinder' },
-          { name: 'dispatch', agentType: 'general-purpose', bound_skill: 'dispatching-parallel-agents' },
-          { name: 'collect', agentType: 'general-purpose', bound_skill: 'summarize' },
-          { name: 'review', agentType: 'general-purpose', bound_skill: 'requesting-code-review' },
+          { id: 'arch.architect', name: 'architect', agentType: 'general-purpose', bound_skills: ['design-patterns'], persona: { title: '架构师' }, permissions: { can_veto: true, can_escalate: true } },
+          { id: 'arch.integrator', name: 'integrator', agentType: 'general-purpose', bound_skills: ['pathfinder'], persona: { title: '集成工程师' }, permissions: { can_escalate: true } },
         ],
       },
       {
@@ -48,8 +43,8 @@ const DEFAULT_ORG_TEMPLATE = {
         description: 'UI / Client implementation',
         required: true,
         roles: [
-          { name: 'fe_page_builder', agentType: 'general-purpose', bound_skill: 'taste-skill' },
-          { name: 'fe_ui_system', agentType: 'general-purpose', bound_skill: 'stitch-skill' },
+          { id: 'fe.fe_page_builder', name: 'fe_page_builder', agentType: 'general-purpose', bound_skills: ['taste-skill'], persona: { title: '页面构建师' } },
+          { id: 'fe.fe_ui_system', name: 'fe_ui_system', agentType: 'general-purpose', bound_skills: ['stitch-skill'], persona: { title: 'UI 系统工程师' } },
         ],
       },
       {
@@ -57,7 +52,7 @@ const DEFAULT_ORG_TEMPLATE = {
         description: 'Services / data / business logic',
         required: true,
         roles: [
-          { name: 'implementer', agentType: 'general-purpose', bound_skill: 'test-driven-development' },
+          { id: 'be.implementer', name: 'implementer', agentType: 'general-purpose', bound_skills: ['test-driven-development'], persona: { title: '实现工程师' } },
         ],
       },
       {
@@ -65,8 +60,8 @@ const DEFAULT_ORG_TEMPLATE = {
         description: 'Cross-department quality gate, acceptance criteria',
         required: true,
         roles: [
-          { name: 'reviewer', agentType: 'general-purpose', bound_skill: 'pr-review', can_veto: true, can_escalate: true },
-          { name: 'tester', agentType: 'general-purpose', bound_skill: 'verification-before-completion', can_escalate: true },
+          { id: 'qa.reviewer', name: 'reviewer', agentType: 'general-purpose', bound_skills: ['pr-review'], persona: { title: '评审员' }, permissions: { can_veto: true, can_escalate: true } },
+          { id: 'qa.tester', name: 'tester', agentType: 'general-purpose', bound_skills: ['verification-before-completion'], persona: { title: '测试员' }, permissions: { can_escalate: true } },
         ],
       },
       {
@@ -74,7 +69,7 @@ const DEFAULT_ORG_TEMPLATE = {
         description: 'User / API / architecture doc authoring',
         required: true,
         roles: [
-          { name: 'docs_author', agentType: 'general-purpose', bound_skill: 'elements-of-style:writing-clearly-and-concisely' },
+          { id: 'docs.docs_author', name: 'docs_author', agentType: 'general-purpose', bound_skills: ['elements-of-style:writing-clearly-and-concisely'], persona: { title: '文档作者' } },
         ],
       },
       {
@@ -82,7 +77,7 @@ const DEFAULT_ORG_TEMPLATE = {
         description: 'Security review, permission model, dependency audit',
         required: false,
         roles: [
-          { name: 'security_auditor', agentType: 'general-purpose', bound_skill: 'security-guardian', can_veto: true, can_escalate: true },
+          { id: 'sec.security_auditor', name: 'security_auditor', agentType: 'general-purpose', bound_skills: ['security-guardian'], persona: { title: '安全审计员' }, permissions: { can_veto: true, can_escalate: true } },
         ],
       },
       {
@@ -90,17 +85,8 @@ const DEFAULT_ORG_TEMPLATE = {
         description: 'Design systems, visual consistency',
         required: false,
         roles: [
-          { name: 'designer', agentType: 'general-purpose', bound_skill: 'design-is' },
+          { id: 'design.designer', name: 'designer', agentType: 'general-purpose', bound_skills: ['design-is'], persona: { title: '设计师' } },
         ],
-      },
-    ],
-    contracts: [
-      {
-        key: 'api-spec',
-        owner_dept: 'Arch',
-        version: 1,
-        schema: { type: 'object', properties: {} },
-        dependents: ['Arch', 'FE', 'BE', 'QA', 'Docs', 'Sec', 'Design'],
       },
     ],
   },

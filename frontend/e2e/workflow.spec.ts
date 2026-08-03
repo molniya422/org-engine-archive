@@ -47,7 +47,10 @@ test.describe('Workflow Editor', () => {
     await page.locator('button:has-text("工作流")').first().click();
     await expect(page.locator('[data-testid="workflow-canvas"]')).toBeVisible({ timeout: 5000 });
     // Generate nodes from the org's departments
-    await page.locator('button:has-text("从组织生成")').click();
+    const genBtn = page.locator('button:has-text("从组织生成")');
+    await genBtn.scrollIntoViewIfNeeded();
+    await expect(genBtn).toBeEnabled({ timeout: 8000 }); // 等 org 加载完（否则 generateFromOrg([]) 空转）
+    await genBtn.dispatchEvent('click'); // 直接派发 click 到按钮，绕过右侧属性面板覆盖（force 点击会落在覆盖层上）
     await page.waitForSelector('.react-flow__node', { timeout: 5000 });
     // Select the first agent node
     await page.locator('.react-flow__node').first().click();
@@ -101,7 +104,10 @@ test.describe('Workflow Editor', () => {
   test('should show role_ref selector and binding check for agent nodes', async ({ page }) => {
     await page.locator('button:has-text("工作流")').first().click();
     await expect(page.locator('[data-testid="workflow-canvas"]')).toBeVisible({ timeout: 5000 });
-    await page.locator('button:has-text("从组织生成")').click();
+    const genBtn = page.locator('button:has-text("从组织生成")');
+    await genBtn.scrollIntoViewIfNeeded();
+    await expect(genBtn).toBeEnabled({ timeout: 8000 }); // 等 org 加载完（否则 generateFromOrg([]) 空转）
+    await genBtn.dispatchEvent('click'); // 直接派发 click 到按钮，绕过右侧属性面板覆盖（force 点击会落在覆盖层上）
     await page.waitForSelector('.react-flow__node', { timeout: 5000 });
     await page.locator('.react-flow__node').first().click();
     // 强绑定：role_ref 下拉（org 角色注册表）

@@ -1,9 +1,9 @@
 import { test as base, expect, type APIRequestContext } from '@playwright/test';
 
-/** Valid org config that passes schema validation. */
+/** Valid org config that passes v2.0 schema validation (pure role registry). */
 export function makeOrg(name: string): unknown {
   return {
-    version: '1.0',
+    version: '2.0',
     org: {
       name,
       description: 'E2E test org',
@@ -13,10 +13,11 @@ export function makeOrg(name: string): unknown {
           description: 'Engineering dept',
           roles: [
             {
+              id: 'engineering.developer',
               name: 'developer',
               description: 'Software developer',
               agentType: 'general-purpose',
-              bound_skill: 'coding',
+              bound_skills: ['coding'],
             },
           ],
         },

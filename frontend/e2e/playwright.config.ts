@@ -17,6 +17,8 @@ export default defineConfig({
     baseURL: `http://localhost:${FRONTEND_PORT}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // 直接驱动本机完整 Chromium（零下载）
+    launchOptions: { executablePath: 'D:\\Chromium\\Application\\chrome.exe' },
   },
   webServer: [
     {
