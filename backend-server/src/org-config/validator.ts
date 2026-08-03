@@ -54,10 +54,22 @@ export class Validator {
     const ids = new Set<string>();
     const errors: ErrorObject[] = [];
     const org = (data as any)?.org;
-    for (const dept of org?.departments ?? []) {
-      for (const role of dept?.roles ?? []) {
+    const departments = org?.departments ?? [];
+    for (let d = 0; d < departments.length; d++) {
+      const dept = departments[d];
+      const roles = dept?.roles ?? [];
+      for (let r = 0; r < roles.length; r++) {
+        const role = roles[r];
         if (role?.id) {
-          if (ids.has(role.id)) errors.push({ message: `duplicate role id: ${role.id}` } as ErrorObject);
+          if (ids.has(role.id)) {
+            errors.push({
+              keyword: 'uniqueRoleId',
+              instancePath: `/org/departments/${d}/roles/${r}/id`,
+              schemaPath: '#/$defs/role/id',
+              params: { duplicateId: role.id },
+              message: `duplicate role id: ${role.id}`,
+            });
+          }
           ids.add(role.id);
         }
       }
