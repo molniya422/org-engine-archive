@@ -137,6 +137,86 @@ def test_agent_without_role_ref_raises():
             pass  # expected
 
 
+# ---------------------------------------------------------------------------
+# Task 2.4: mediate() explicit rules (message edges + channel ACL + fallback)
+# ---------------------------------------------------------------------------
+
+def _med_org():
+    """Plain-dict org view as passed to _mediation_decision."""
+    return {
+        'a1': {'kind': 'executor', 'department': 'FE', 'parent': 'mfe'},
+        'a2': {'kind': 'executor', 'department': 'FE', 'parent': 'mfe'},
+        'mfe': {'kind': 'manager', 'department': 'FE', 'parent': None},
+        'a3': {'kind': 'executor', 'department': 'BE', 'parent': 'mbe'},
+        'mbe': {'kind': 'manager', 'department': 'BE', 'parent': None},
+    }
+
+
+def _reset_wf_state():
+    from organization_orchestrator import set_workflow_message_edges, set_workflow_channels
+    set_workflow_message_edges(set())
+    set_workflow_channels({}, {})
+
+
+def test_default_cross_dept_rejected():
+    from organization_orchestrator import ChannelHandle, ChannelVerdict, _mediation_decision
+    _reset_wf_state()
+    handle = ChannelHandle('a1', 'FE', 'mfe')
+    assert _mediation_decision(handle, 'a3', _med_org()) == ChannelVerdict.REJECT_CROSS_DEPT
+
+
+def test_same_dept_default_allowed():
+    from organization_orchestrator import ChannelHandle, ChannelVerdict, _mediation_decision
+    _reset_wf_state()
+    handle = ChannelHandle('a1', 'FE', 'mfe')
+    assert _mediation_decision(handle, 'a2', _med_org()) == ChannelVerdict.ALLOW
+
+
+def test_explicit_message_edge_allows_cross_dept():
+    from organization_orchestrator import ChannelHandle, ChannelVerdict, _mediation_decision, set_workflow_message_edges
+    _reset_wf_state()
+    set_workflow_message_edges({('a1', 'a3')})
+    handle = ChannelHandle('a1', 'FE', 'mfe')
+    assert _mediation_decision(handle, 'a3', _med_org()) == ChannelVerdict.ALLOW
+    _reset_wf_state()
+
+
+def test_channel_acl_allows_member():
+    from organization_orchestrator import ChannelHandle, ChannelVerdict, _mediation_decision, set_workflow_channels
+    _reset_wf_state()
+    # a1(FE) 与 a3(BE) 同挂频道 api；a3 在读授权内 → 跨部门经频道放行
+    set_workflow_channels({'api': {'read': ['a3'], 'write': []}}, {'a1': 'api', 'a3': 'api'})
+    handle = ChannelHandle('a1', 'FE', 'mfe')
+    assert _mediation_decision(handle, 'a3', _med_org()) == ChannelVerdict.ALLOW
+    _reset_wf_state()
+
+
+def test_configure_workflow_wires_edges_and_channels():
+    from organization_orchestrator import OrganizationOrchestrator
+    from organization_orchestrator import ChannelHandle, ChannelVerdict, _mediation_decision
+    _reset_wf_state()
+    wf = {
+        'message_edges': [('n1', 'n3')],
+        'channels': {'api': {'acl': {'read': ['n3'], 'write': []}}},
+        'flow_edges': [{'source': 'n1', 'target': 'n2'}, {'source': 'n2', 'target': 'n3'}],
+        'nodes': [
+            {'id': 'n1', 'type': 'agent', 'role_ref': 'a'},
+            {'id': 'n2', 'type': 'channel', 'channel': {'key': 'api'}},
+            {'id': 'n3', 'type': 'agent', 'role_ref': 'b'},
+        ],
+        'meetings': [{'type': 'ministerial'}],
+    }
+    with tempfile.TemporaryDirectory() as d:
+        orch = OrganizationOrchestrator(states_dir=Path(d), session_id='t')
+        orch.configure_workflow(wf)
+        assert orch._meetings == [{'type': 'ministerial'}]
+        # n2 是 channel 节点，n1/n3 经 flow 边归属 api 频道
+        from organization_orchestrator import _WF_NODE_CHANNEL
+        assert _WF_NODE_CHANNEL.get('n1') == 'api'
+        assert _WF_NODE_CHANNEL.get('n3') == 'api'
+    _reset_wf_state()
+
+
 if __name__ == '__main__':
     import traceback
     failed = 0

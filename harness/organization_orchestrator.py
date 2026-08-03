@@ -109,11 +109,39 @@ class ChannelHandle:
         return kernel.mediate(self, to_id)
 
 
+# Workflow-config v2 explicit communication rules.
+# Populated by OrganizationOrchestrator.configure_workflow(). Explicit rules
+# override the org-tree default isolation (same-dept / upward allow, else reject).
+_WF_MESSAGE_EDGES: set = set()      # {(sender_node_id, recipient_node_id)}
+_WF_CHANNEL_ACL: dict = {}          # {channel_key: {'read': [...], 'write': [...]}}
+_WF_NODE_CHANNEL: dict = {}         # {node_id: channel_key}
+
+
+def set_workflow_message_edges(edges: set) -> None:
+    global _WF_MESSAGE_EDGES
+    _WF_MESSAGE_EDGES = edges
+
+
+def set_workflow_channels(acl: dict, node_channel: dict) -> None:
+    global _WF_CHANNEL_ACL, _WF_NODE_CHANNEL
+    _WF_CHANNEL_ACL, _WF_NODE_CHANNEL = acl, node_channel
+
+
 def _mediation_decision(handle: "ChannelHandle", to_id: str, org: dict) -> ChannelVerdict:
     """Decide allow/reject for a handle→to_id message given the org tree.
 
     `org` maps node_id -> {kind: executor|manager, department, parent}.
     """
+    # 1) 显式 message 边：命中即 ALLOW（可放宽为跨部门点对点）
+    if (handle.executor_id, to_id) in _WF_MESSAGE_EDGES:
+        return ChannelVerdict.ALLOW
+    # 2) 显式 channel：双方挂同一频道且接收方在频道读/写授权内 → ALLOW
+    ch = _WF_NODE_CHANNEL.get(handle.executor_id)
+    if ch and _WF_NODE_CHANNEL.get(to_id) == ch:
+        acl = _WF_CHANNEL_ACL.get(ch, {})
+        if to_id in acl.get('read', []) or to_id in acl.get('write', []):
+            return ChannelVerdict.ALLOW
+    # 3) 默认回落：现有组织树隔离
     to = org.get(to_id)
     if to is None:
         return ChannelVerdict.REJECT_UNKNOWN
@@ -388,6 +416,8 @@ class OrganizationOrchestrator:
         # Audit log: every subagent call, skill use, meeting, and audit decision
         # gets a stamped entry. Feed for the summary report at the end.
         self.audit_log: list[dict] = []
+        # workflow-config v2 meetings configured via configure_workflow()
+        self._meetings: list = []
         self._init_state()
 
     # ---- audit log: 每条事件都带时间戳 + actor + event_type + details ----
@@ -705,6 +735,30 @@ class OrganizationOrchestrator:
         return out
 
     # ---- message mediation (the ONLY legal send path) ----
+
+    def configure_workflow(self, workflow: dict) -> None:
+        """Apply workflow-config v2 explicit comm rules + meeting specs.
+
+        Message edges and channel ACLs override the org-tree default isolation.
+        """
+        set_workflow_message_edges(set(workflow.get('message_edges', [])))
+        channels = workflow.get('channels', {})
+        acl = {k: v.get('acl', {'read': [], 'write': []}) for k, v in channels.items()}
+        # 节点→频道归属：经 flow 边连到 channel 节点的 agent 属于该频道。
+        # （channel 节点 id 只用于定位，不进入 node_channel 表）
+        channel_by_node = {
+            n['id']: n.get('channel', {}).get('key')
+            for n in workflow.get('nodes', []) if n.get('type') == 'channel'
+        }
+        node_channel: dict = {}
+        for e in workflow.get('flow_edges', []):
+            src, tgt = e.get('source'), e.get('target')
+            if src in channel_by_node and tgt not in channel_by_node:
+                node_channel[tgt] = channel_by_node[src]
+            elif tgt in channel_by_node and src not in channel_by_node:
+                node_channel[src] = channel_by_node[tgt]
+        set_workflow_channels(acl, node_channel)
+        self._meetings = workflow.get('meetings', [])
 
     def mediate(self, handle: ChannelHandle, to_id: str) -> dict:
         """The kernel mediates every executor message. Returns allow/reject + record."""
