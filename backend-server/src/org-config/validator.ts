@@ -50,9 +50,18 @@ export class Validator {
 
   validateRaw(data: unknown): ValidationResult {
     const valid = this.validate(data) as boolean;
-    return {
-      valid,
-      errors: valid ? [] : structuredClone(this.validate.errors ?? []),
-    };
+    if (!valid) return { valid, errors: structuredClone(this.validate.errors ?? []) };
+    const ids = new Set<string>();
+    const errors: ErrorObject[] = [];
+    const org = (data as any)?.org;
+    for (const dept of org?.departments ?? []) {
+      for (const role of dept?.roles ?? []) {
+        if (role?.id) {
+          if (ids.has(role.id)) errors.push({ message: `duplicate role id: ${role.id}` } as ErrorObject);
+          ids.add(role.id);
+        }
+      }
+    }
+    return errors.length ? { valid: false, errors } : { valid: true, errors: [] };
   }
 }
