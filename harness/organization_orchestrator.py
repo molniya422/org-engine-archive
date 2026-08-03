@@ -775,15 +775,25 @@ class OrganizationOrchestrator:
         set_workflow_channels(acl, node_channel)
         self._meetings = workflow.get('meetings', [])
 
+    def _append_line(self, filename: str, obj: dict) -> None:
+        """Append one JSON line to states_dir/<filename> (JSONL audit/minutes)."""
+        path = self.states_dir / filename
+        os.makedirs(path.parent, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+
     def mediate(self, handle: ChannelHandle, to_id: str) -> dict:
         """The kernel mediates every executor message. Returns allow/reject + record."""
         verdict = _mediation_decision(handle, to_id, self._org_view())
         record = {
             "from": handle.executor_id, "to": to_id,
             "from_dept": handle.department,
-            "verdict": verdict.value, "ts": _now_iso(),
+            "channel": _WF_NODE_CHANNEL.get(handle.executor_id),
+            "verdict": verdict.value, "reason": f"{verdict.value} (mediation)",
+            "ts": _now_iso(),
         }
         self._messages.append(record)
+        self._append_line("comm.jsonl", record)   # 通信审计持久化
         return {"verdict": verdict.value, "record": record}
 
     def _org_view(self) -> dict:
@@ -869,6 +879,12 @@ class OrganizationOrchestrator:
                         "verdicts": manager_verdicts,
                         "meeting_type": meeting_type,
                         "participants": participants})
+        # 会议纪要持久化：meetings.jsonl（含 type/participants/cycle/decision）
+        self._append_line("meetings.jsonl", {
+            "type": meeting_type, "cycle": cycle,
+            "participants": participants, "decision": decision,
+            "ts": _now_iso(),
+        })
         self.log_event("meeting", "kernel",
                        {"cycle": cycle, "decision": decision, "verdicts": manager_verdicts})
         self._cycles_by_layer.setdefault(2, 0)

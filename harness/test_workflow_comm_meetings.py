@@ -6,6 +6,7 @@ Run:  python harness/test_workflow_comm_meetings.py
 """
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -275,6 +276,49 @@ def test_run_meeting_type_param_accepted():
     assert decision in ('accept', 'revise', 'escalate')
     # 会议事件写入审计日志（含 meeting_type / participants）
     assert any(e.get('event_type') == 'meeting' for e in orch.audit_log)
+
+
+# ---------------------------------------------------------------------------
+# Task 2.6: comm audit + meeting minutes persistence (JSONL)
+# ---------------------------------------------------------------------------
+
+def test_mediate_persists_comm_audit():
+    """mediate() 把每条消息写 comm.jsonl（sender/recipient/channel/verdict）。"""
+    from organization_orchestrator import OrganizationOrchestrator
+    d = Path(tempfile.mkdtemp(prefix='comm-'))
+    orch = OrganizationOrchestrator(states_dir=d, session_id='t')
+    mgr = orch.add_manager('manager_decompose', 'FE', parent=None, depth=2)
+    e1 = orch.add_executor('fe_page_builder', 'FE', mgr.node_id, depth=3)
+    e2 = orch.add_executor('fe_ui_system', 'FE', mgr.node_id, depth=3)
+    result = orch.mediate(orch.channel_handle(e1.node_id), e2.node_id)
+    assert result['verdict'] == 'allow'          # 同部门默认放行
+    lines = (d / 'comm.jsonl').read_text(encoding='utf-8').strip().split('\n')
+    assert len(lines) >= 1
+    rec = json.loads(lines[-1])
+    assert rec['from'] == e1.node_id
+    assert rec['to'] == e2.node_id
+    assert rec['verdict'] == 'allow'
+    assert rec['channel'] is None                # 无显式频道 → null
+
+
+def test_run_meeting_persists_minutes():
+    """run_meeting() 把纪要写 meetings.jsonl（type/cycle/participants/decision）。"""
+    from organization_orchestrator import OrganizationOrchestrator
+    d = Path(tempfile.mkdtemp(prefix='meet-'))
+    orch = OrganizationOrchestrator(states_dir=d, session_id='t')
+    mgr = orch.add_manager('manager_decompose', 'Arch', parent=None, depth=2)
+    ex = orch.add_executor('implementer', 'BE', mgr.node_id, depth=3)
+    decision = orch.run_meeting(
+        {'reviewer': 'APPROVE', 'tester': 'PASS'}, cycle=1,
+        meeting_type='dept_internal', department='BE',
+    )
+    lines = (d / 'meetings.jsonl').read_text(encoding='utf-8').strip().split('\n')
+    assert len(lines) >= 1
+    rec = json.loads(lines[-1])
+    assert rec['type'] == 'dept_internal'
+    assert rec['cycle'] == 1
+    assert rec['decision'] in ('accept', 'revise', 'escalate')
+    assert ex.node_id in rec['participants']     # 部门内会议参与者 = BE 执行者
 
 
 if __name__ == '__main__':
