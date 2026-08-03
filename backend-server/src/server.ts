@@ -12,6 +12,8 @@ import { registerPlaybookRoutes } from './playbooks/routes.js';
 import './playbooks/built-in/index';
 import { registerHealthRoutes } from './health/routes.js';
 import { OrgConfigStore } from './org-config/store';
+import { WorkflowConfigStore } from './workflow-config/store';
+import { registerWorkflowRoutes } from './workflow.routes';
 import { SkillPool } from './skill-scanner/pool';
 import { OrchestratorClient } from './orchestrator-adapter/client';
 import { RunManager } from './run-manager/manager';
@@ -40,6 +42,8 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   // Routes
   app.get('/api/v1/health', async () => ({ status: 'ok' }));
   registerOrgRoutes(app, store);
+  const workflowStore = new WorkflowConfigStore();
+  registerWorkflowRoutes(app, workflowStore);
   registerSkillRoutes(app, pool);
   registerRunRoutes(app, runManager);
   registerWsRoutes(app, runManager, persistence);
