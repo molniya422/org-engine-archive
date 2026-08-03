@@ -79,6 +79,64 @@ def test_load_v1_legacy_still_works():
         assert loaded['departments'][0]['manager_pipeline'][0]['name'] == 'decompose'
 
 
+# ---------------------------------------------------------------------------
+# Task 2.2: workflow_config_loader
+# ---------------------------------------------------------------------------
+
+def test_load_workflow_channels_and_meetings():
+    import yaml
+    from workflow_config_loader import load_workflow_config
+
+    cfg = {
+        'version': '2.0',
+        'name': 'wf',
+        'nodes': [
+            {'id': 'n1', 'type': 'agent', 'role_ref': 'arch.architect'},
+            {'id': 'n2', 'type': 'channel', 'channel': {
+                'key': 'api',
+                'acl': {'read': ['fe.*'], 'write': ['arch.architect']},
+            }},
+            {'id': 'n3', 'type': 'meeting', 'meeting': {
+                'type': 'ministerial',
+                'participants': {'from': 'managers'},
+                'agenda': 'align API contract',
+            }},
+        ],
+        'edges': [
+            {'id': 'e1', 'source': 'n1', 'target': 'n2', 'kind': 'flow'},
+            {'id': 'e2', 'source': 'n1', 'target': 'n3', 'kind': 'message'},
+        ],
+    }
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'wf.yaml'
+        p.write_text(yaml.safe_dump(cfg), encoding='utf-8')
+        wf = load_workflow_config(str(p))
+        assert wf['channels']['api']['acl']['write'] == ['arch.architect']
+        assert wf['message_edges'] == [('n1', 'n3')]
+        assert len(wf['meetings']) == 1
+        assert wf['meetings'][0]['type'] == 'ministerial'
+        assert wf['meetings'][0]['participants']['from'] == 'managers'
+
+
+def test_agent_without_role_ref_raises():
+    import yaml
+    from workflow_config_loader import load_workflow_config
+
+    cfg = {
+        'version': '2.0', 'name': 'wf',
+        'nodes': [{'id': 'n1', 'type': 'agent'}],
+        'edges': [],
+    }
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'wf.yaml'
+        p.write_text(yaml.safe_dump(cfg), encoding='utf-8')
+        try:
+            load_workflow_config(str(p))
+            raise AssertionError('expected ValueError')
+        except ValueError:
+            pass  # expected
+
+
 if __name__ == '__main__':
     import traceback
     failed = 0
