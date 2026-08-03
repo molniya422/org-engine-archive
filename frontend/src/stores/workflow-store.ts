@@ -25,6 +25,13 @@ interface WorkflowState {
   // Undo/redo history
   past: HistoryEntry[];
   future: HistoryEntry[];
+  // 运行时视觉状态（4.5 callback高亮当前执行的节点与消息边）
+  activeNodeIds: string[];
+  activeMessageEdges: string[];
+  markNodeActive: (nodeId: string) => void;
+  markNodeInactive: (nodeId: string) => void;
+  markMessageActive: (edgeId: string) => void;
+  markMessageInactive: (edgeId: string) => void;
   // Actions
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -61,6 +68,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   templateId: null,
   past: [],
   future: [],
+  activeNodeIds: [],
+  activeMessageEdges: [],
+
+  markNodeActive: (nodeId) => {
+    set((s) =>
+      s.activeNodeIds.includes(nodeId) ? s : { activeNodeIds: [...s.activeNodeIds, nodeId] },
+    );
+  },
+  markNodeInactive: (nodeId) => {
+    set((s) => ({ activeNodeIds: s.activeNodeIds.filter((id) => id !== nodeId) }));
+  },
+  markMessageActive: (edgeId) => {
+    set((s) =>
+      s.activeMessageEdges.includes(edgeId)
+        ? s
+        : { activeMessageEdges: [...s.activeMessageEdges, edgeId] },
+    );
+    // 3s 后自动清除高亮
+    setTimeout(() => get().markMessageInactive(edgeId), 3000);
+  },
+  markMessageInactive: (edgeId) => {
+    set((s) => ({ activeMessageEdges: s.activeMessageEdges.filter((e) => e !== edgeId) }));
+  },
 
   onNodesChange: (changes) => {
     const state = get();

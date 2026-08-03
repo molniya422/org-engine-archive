@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api } from '@/api/client';
 import { RunWsClient } from '@/api/ws';
+import { useWorkflowStore } from '@/stores/workflow-store';
 
 type RunStatus = 'queued' | 'running' | 'awaiting_user' | 'done' | 'cancelled' | 'blocked';
 
@@ -98,6 +99,27 @@ export const useRunStore = create<RunStoreState>((set, get) => ({
         // Capture orchestrator stderr output
         set(s => ({ logs: [...s.logs.slice(-200), `[引擎] ${data.text}`] }));
       } else {
+        // ── 画布运行高亮：把 workflow 事件映射到画布节点/消息边 ──
+        const wf = useWorkflowStore.getState();
+        if (data.type === 'executor_dispatched' && data.node_id) {
+          wf.markNodeActive(data.node_id);
+        } else if (data.type === 'executor_completed' && data.node_id) {
+          wf.markNodeInactive(data.node_id);
+        } else if (data.type === 'message_mediated' && data.message?.verdict === 'allow') {
+          // 引擎发的是角色 id，画布 agent 节点用 id/role/roleRef 关联
+          const findNode = (roleId: string) =>
+            wf.nodes.find(
+              (n: any) => n.id === roleId || n.data?.role === roleId || n.data?.roleRef === roleId,
+            );
+          const from = findNode(data.message.sender);
+          const to = findNode(data.message.recipient);
+          if (from && to) {
+            const edge = wf.edges.find(
+              (e: any) => e.source === from.id && e.target === to.id && e.data?.kind === 'message',
+            );
+            if (edge) wf.markMessageActive(edge.id);
+          }
+        }
         // Merge event into current run state
         set(s => ({
           currentRun: s.currentRun ? {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type DragEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type DragEvent } from 'react';
 import {
   ReactFlow,
   Background,
@@ -38,7 +38,27 @@ interface WorkflowCanvasProps {
 function CanvasInner({ onNodeClick, readOnly }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, fitView } = useReactFlow();
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, removeNodeById } = useWorkflowStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, removeNodeById, activeNodeIds, activeMessageEdges } = useWorkflowStore();
+
+  // 运行高亮：活跃节点加 emerald ring，活跃消息边点亮为动画绿色
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((n) =>
+        activeNodeIds.includes(n.id)
+          ? { ...n, className: `${n.className ?? ''} ring-2 ring-emerald-400`.trim() }
+          : n,
+      ),
+    [nodes, activeNodeIds],
+  );
+  const displayEdges = useMemo(
+    () =>
+      edges.map((e) =>
+        activeMessageEdges.includes(e.id)
+          ? { ...e, animated: true, style: { ...(e.style ?? {}), stroke: '#10b981' } }
+          : e,
+      ),
+    [edges, activeMessageEdges],
+  );
 
   // When nodes are loaded (e.g. playbook apply), fit them into the visible viewport
   useEffect(() => {
@@ -85,8 +105,8 @@ function CanvasInner({ onNodeClick, readOnly }: WorkflowCanvasProps) {
       data-testid="workflow-canvas"
     >
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

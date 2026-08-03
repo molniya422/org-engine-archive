@@ -170,7 +170,11 @@ export function RunMonitorView() {
                         {event.type === 'agent_completed' && ` agent ${event.agent_name || ''} completed`}
                         {event.type === 'gateway_prompt' && ' awaiting user'}
                         {event.type === 'run_completed' && ` ${event.status === 'success' ? 'succeeded' : 'failed'}`}
-                        {!event.layer && !event.phase && !event.type?.match(/^(agent_|run_|gateway_)/) && JSON.stringify(event).slice(0, 120)}
+                        {event.type === 'meeting_started' && ` 会议开始 ${event.meeting?.type ?? ''} · ${event.meeting?.participants?.length ?? 0} 人`}
+                        {event.type === 'meeting_cycle' && ` 第 ${event.meeting?.cycle ?? '?'} 轮 → ${event.meeting?.decision ?? '?'}`}
+                        {event.type === 'message_mediated' && ` ${event.message?.sender} → ${event.message?.recipient} ${event.message?.verdict === 'allow' ? '✓ 允许' : '⛔ 拦截'}`}
+                        {event.type === 'decision_recorded' && ` 决议写入 ${event.decision?.target ?? '?'}`}
+                        {!event.layer && !event.phase && !event.type?.match(/^(agent_|run_|gateway_|meeting_|message_|decision_)/) && JSON.stringify(event).slice(0, 120)}
                       </span>
                     </div>
                   );
