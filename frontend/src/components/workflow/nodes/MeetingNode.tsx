@@ -1,8 +1,10 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { Users } from 'lucide-react';
 import type { MeetingNodeData } from '../types';
 import NodeDeleteButton from './NodeDeleteButton';
+
+type Props = { data: MeetingNodeData; selected?: boolean; id?: string };
 
 const MEETING_TYPE_LABEL: Record<MeetingNodeData['meetingType'], string> = {
   dept_internal: '部门内',
@@ -11,7 +13,7 @@ const MEETING_TYPE_LABEL: Record<MeetingNodeData['meetingType'], string> = {
 };
 
 /** 会议节点：类型徽标 + 参与者来源 + 议程。 */
-function MeetingNode({ data, selected, id }: NodeProps<MeetingNodeData>) {
+function MeetingNode({ data, selected, id }: Props) {
   return (
     <div
       className={`group relative px-4 py-3 rounded-md border-2 bg-card min-w-[160px] ${

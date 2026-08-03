@@ -1,11 +1,13 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { Radio } from 'lucide-react';
 import type { ChannelNodeData } from '../types';
 import NodeDeleteButton from './NodeDeleteButton';
 
+type Props = { data: ChannelNodeData; selected?: boolean; id?: string };
+
 /** 共享通信频道节点：读写 ACL 数量展示。虚线边框区分流程节点。 */
-function ChannelNode({ data, selected, id }: NodeProps<ChannelNodeData>) {
+function ChannelNode({ data, selected, id }: Props) {
   return (
     <div
       className={`group relative px-4 py-3 rounded-md border-2 border-dashed bg-card min-w-[160px] ${
