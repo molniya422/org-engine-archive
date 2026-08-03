@@ -9,3 +9,7 @@ backend-server/bundle/
 **/e2e-report/
 *.local.yaml
 .env
+
+# build artifacts
+*.tsbuildinfo
+*.stackdump
