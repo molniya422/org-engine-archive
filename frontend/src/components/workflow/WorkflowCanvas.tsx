@@ -16,6 +16,8 @@ import AgentNode from './nodes/AgentNode';
 import SkillNode from './nodes/SkillNode';
 import DecisionNode from './nodes/DecisionNode';
 import ParallelNode from './nodes/ParallelNode';
+import ChannelNode from './nodes/ChannelNode';
+import MeetingNode from './nodes/MeetingNode';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import type { WorkflowNodeData } from './types';
 
@@ -24,6 +26,8 @@ const nodeTypes: NodeTypes = {
   skill: SkillNode,
   decision: DecisionNode,
   parallel: ParallelNode,
+  channel: ChannelNode,
+  meeting: MeetingNode,
 };
 
 interface WorkflowCanvasProps {
