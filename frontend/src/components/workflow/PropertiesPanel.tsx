@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MousePointerClick, X, Trash2, Building2 } from 'lucide-react';
+import { BindingCheckPanel } from '../binding/BindingCheckPanel';
 
 const TYPE_LABEL: Record<string, string> = {
   agent: '智能体',
@@ -328,6 +329,10 @@ export function PropertiesPanel() {
          </pre>
        </div>
       )}
+
+      <div className="mt-4">
+        <BindingCheckPanel />
+      </div>
    </div>
   );
 }

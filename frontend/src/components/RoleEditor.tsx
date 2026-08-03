@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { t } from '@/i18n';
 import { useSkillsStore } from '@/stores/skills-store';
+import { BindingCheckPanel } from './binding/BindingCheckPanel';
 
 /** org-config v2 角色（纯角色注册表：身份/技能/权限）。bound_skill 为 v1 残留，编辑时规范化。 */
 interface Role {
@@ -187,6 +188,8 @@ export function RoleEditor({ selectedRole, departments, onUpdate }: RoleEditorPr
           </label>
         </div>
       </div>
+
+      <BindingCheckPanel />
     </div>
   );
 }
