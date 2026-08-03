@@ -208,17 +208,24 @@ edges:
 
 ## 8. 实现顺序（给 writing-plans 用）
 
-- **P0**：schema v2.0（org + workflow）+ validator + 绑定解析器 + 迁移脚本
-- **P1**：后端 workflow store/routes + 协议扩展（`workflow_path` + 新事件）+ 查询端点
-- **P2**：引擎（harness）——workflow loader、`mediate()` 显式规则、`run_meeting(meeting_type)`、部门内会议原语、审计日志
-- **P3**：前端 org 瘦身 + workflow 画布（channel/meeting 节点、message 边、roleRef 选择器）
-- **P4**：前端四个新视图 + RunMonitor 扩展
-- **P5**：端到端测试（schema→editor→run→events→视图）
+- **P0**：schema v2.0（org + workflow）+ validator + 绑定解析器 + 迁移脚本 — **已实现**
+- **P1**：后端 workflow store/routes + 协议扩展（`workflow_path` + 新事件）+ 查询端点 — **已实现**
+- **P2**：引擎（harness）——workflow loader、`mediate()` 显式规则、`run_meeting(meeting_type)`、部门内会议原语、审计日志 — **已实现**
+- **P3**：前端 org 瘦身 + workflow 画布（channel/meeting 节点、message 边、roleRef 选择器） — **已实现**
+- **P4**：前端四个新视图 + RunMonitor 扩展 — **已实现**
+- **P5**：端到端测试（schema→editor→run→events→视图） — **已实现**
 
 ---
 
 ## 9. 未决项
 
-- `dept_internal` 会议的参与者自动推导规则（单部门全部角色 vs 指定角色）：以「显式列表优先、缺省用部门全角色」为默认
-- 通信审计日志的保留窗口（内存 vs 落盘）：默认落盘到引擎状态目录，可配置
-- `channel` 是否与 `ContractStore` 统一：初版独立（channel=消息频道，contract=对齐接口），后续可融合
+- `dept_internal` 会议的参与者自动推导规则（单部门全部角色 vs 指定角色）：以「显式列表优先、缺省用部门全角色」为默认 — **已定**（引擎 `meeting_participants` 实现）
+- 通信审计日志的保留窗口（内存 vs 落盘）：默认落盘到引擎状态目录，可配置 — **已定**（`comm.jsonl` 落盘）
+- `channel` 是否与 `ContractStore` 统一：初版独立（channel=消息频道，contract=对齐接口），后续可融合 — **已定**（channel 独立实现）
+
+## 实现状态（2026-08-03）
+
+- 全部 P0-P5 已实现并跨仓库提交（org-engine-editor `feat/workflow-editor` + lean-hooks `org-engine`）。
+- 变更（相对本设计）：`products.json` → `products.jsonl`（引擎落盘 JSONL）；强绑定校验面板内嵌于 RoleEditor + PropertiesPanel（不再新增独立路由视图）；Playwright 断言面向已交付 UI（稳定锚点）。
+- 测试：前端 tsc 0 错误 + vitest、后端 vitest（40 测试）、引擎 pytest（41 测试）全绿；前端 `npm run build` 通过。
+- 未在本机执行：Playwright 完整 suite 需 `npx playwright install chromium` 后跑（断言已静态编译通过）。
