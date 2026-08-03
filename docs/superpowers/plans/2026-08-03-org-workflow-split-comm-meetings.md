@@ -55,7 +55,8 @@ org-engine-editor/                          # 编辑器 repo（P0-P5 主体）
 │   ├── views/MeetingsView.tsx              # [CREATE]
 │   ├── views/CommAuditView.tsx             # [CREATE]
 │   ├── views/ProductRegistryView.tsx       # [CREATE]
-│   ├── views/RunMonitorView.tsx            # [MODIFY] 新事件渲染
+│   ├── views/RunMonitorView.tsx            # [MODIFY] 新事件渲染 + 画布高亮
+│   ├── lib/binding-check.ts                # [CREATE] 强绑定校验工具（refs/断引用/环检测）
 │   ├── components/binding/BindingCheckPanel.tsx    # [CREATE]
 │   ├── router.tsx                          # [MODIFY] 注册新视图
 │   └── layouts/AppShell.tsx                # [MODIFY] 导航项
@@ -1515,11 +1516,35 @@ export function findBrokenRefs(org: any, workflows: any[]): string[] {
   const roleIds = new Set(org?.org?.departments?.flatMap((d: any) => d.roles ?? []).map((r: any) => r.id));
   return workflows.flatMap((wf: any) => (wf.nodes ?? []).filter((n: any) => n.role_ref && !roleIds.has(n.role_ref)).map((n: any) => `${wf.name}:${n.id}->${n.role_ref}`));
 }
+
+// 循环依赖检测：对 workflow 的 flow 边做拓扑排序，未排尽的节点在环上
+export function detectFlowCycles(edges: { source: string; target: string; kind?: string }[]): string[][] {
+  const flow = edges.filter((e) => e.kind !== 'message');
+  const adj = new Map<string, string[]>();
+  const indeg = new Map<string, number>();
+  for (const e of flow) {
+    if (!adj.has(e.source)) adj.set(e.source, []);
+    adj.get(e.source)!.push(e.target);
+    indeg.set(e.target, (indeg.get(e.target) ?? 0) + 1);
+  }
+  const queue: string[] = [];
+  for (const n of adj.keys()) if (!indeg.has(n)) queue.push(n);
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const nx of adj.get(cur) ?? []) {
+      indeg.set(nx, indeg.get(nx)! - 1);
+      if (indeg.get(nx) === 0) queue.push(nx);
+    }
+  }
+  // 仍剩 indeg>0 的节点都在某个环上
+  const inCycle = [...indeg.entries()].filter(([, d]) => d > 0).map(([n]) => n);
+  return inCycle.length ? [inCycle] : [];
+}
 ```
 
 - [ ] **Step 2: BindingCheckPanel 组件**
 
-在 RoleEditor 底部与 PropertiesPanel 中显示：当前 org 每个角色被哪些 workflow 引用（绿 ✓）、断引用列表（红 ⚠）。数据来自 `api.listWorkflows()` + `collectWorkflowRefs`。
+在 RoleEditor 底部与 PropertiesPanel 中显示：当前 org 每个角色被哪些 workflow 引用（绿 ✓）、断引用列表（红 ✗）、以及每个 workflow 的 `detectFlowCycles` 环警告（红 ⚠，含环上节点）。数据来自 `api.listWorkflows()` + `collectWorkflowRefs` + `detectFlowCycles`。
 
 - [ ] **Step 3: 前端测试 + Commit**
 
@@ -1530,18 +1555,38 @@ Expected: 通过。
 git add frontend/src/lib/binding-check.ts frontend/src/components/binding/BindingCheckPanel.tsx frontend/src/components/RoleEditor.tsx frontend/src/components/workflow/PropertiesPanel.tsx && git commit -m "feat(ui): strong-binding validation panel"
 ```
 
-## Task 4.5: RunMonitor 新事件渲染
+## Task 4.5: RunMonitor 新事件渲染 + 画布运行高亮
 
 **Files:**
 - Modify: `frontend/src/views/RunMonitorView.tsx`
+- Modify: `frontend/src/components/workflow/WorkflowCanvas.tsx`
+- Modify: `frontend/src/stores/workflow-store.ts`
 
 - [ ] **Step 1: 渲染 4 类新事件**
 
 在 RunMonitorView 的事件流中，对 `meeting_started/meeting_cycle/message_mediated/decision_recorded` 渲染专用行（仿现有 gateway_prompt 的渲染模式）。`meeting_cycle` 显示轮次与决议；`message_mediated` 显示 allow/reject 徽标。
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: 画布实时高亮执行节点 + 消息边动画**
 
-Commit 消息：`feat(ui): run monitor renders meeting/comm/decision events`。
+在 `workflow-store.ts` 加运行时状态字段：
+
+```ts
+interface RunVisualState {
+  activeNodeIds: string[];              // 当前正在执行的节点（executor_dispatched 设置 / executor_completed 清除）
+  activeMessageEdges: string[];         // 当前活跃的消息边（message_mediated=allow 时加入）
+}
+```
+
+`ws.ts` 收到 `executor_dispatched`（含 node_id）→ `workflowStore.markNodeActive(node_id)`；收到 `executor_completed` → `markNodeInactive`；收到 `message_mediated`（verdict=allow，含 sender/recipient）→ `markMessageActive(sender→recipient)`，3s 后自动清除。
+
+`WorkflowCanvas.tsx` 中：`node.data.active` 为真 → 节点加 `ring-2 ring-emerald-400` 高亮类；`edge.data.active` 为真 → 设 `animated:true` 且 `stroke:#10b981`。对照 `executor_dispatched` 事件里 `role`/`node_id` 匹配画布节点（agent 节点以 roleRef 或 node.id 关联）。
+
+- [ ] **Step 3: 前端测试 + Commit**
+
+Run: `cd org-engine-editor/frontend && npx tsc --noEmit && npm test`
+Expected: 无错、通过。
+
+Commit 消息：`feat(ui): run monitor renders meeting/comm events; canvas live-highlights active nodes and message edges`。
 
 > **Phase 4 完成标志：** 4 个新视图可导航、数据来自 insights 端点与 ws 事件；`npm run test:frontend` 全绿。
 
@@ -1628,6 +1673,7 @@ git add frontend/e2e/workflow.spec.ts && git commit -m "test(e2e): workflow canv
 - §2.1 org v2 → Task 0.1/0.2 ✓；§2.2 workflow v2 → Task 0.3/0.4 ✓
 - §3.1 通信显式规则 → Task 2.4 ✓；§3.2 会议类型 → Task 2.5 ✓；§3.3 协议 → Task 1.1/2.3 ✓
 - §4.1 四视图 → Task 4.1-4.4 ✓；§4.2 画布 → Task 3.2-3.4 ✓；§4.3 org 瘦身 → Task 3.1 ✓；§4.4 RunMonitor → Task 4.5 ✓
+- **补充（优化建议.txt）**：画布运行高亮 + 消息边动画 → Task 4.5 Step 2 ✓；workflow 循环依赖检测 → Task 4.4（`detectFlowCycles`）✓
 - §5 后端 → Task 1.1-1.3 ✓；§6 迁移 → Task 0.6 ✓；§7 测试 → 各 Task 内嵌 + Phase 5 ✓
 
 **占位符扫描：** 无 TBD/TODO；所有代码步骤含完整代码。
