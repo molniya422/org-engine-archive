@@ -178,6 +178,8 @@ class ContractStore:
         }
         self._store["log"].append({"op": "draft", "key": key, "by": drafter_id, "ts": _now_iso()})
         self._flush()
+        if hasattr(self, '_orch_log'):
+            self._orch_log('contract_draft', drafter_id, {'key': key, 'version': 1, 'content_keys': list(content.keys())})
         return self._store["contracts"][key]
 
     def propose_change(self, key: str, new_content: dict, proposer_id: str) -> dict:
@@ -211,6 +213,8 @@ class ContractStore:
         self._store["log"].append({"op": "ratify", "key": key, "new_version": new_version,
                                    "affected": affected, "ts": _now_iso()})
         self._flush()
+        if hasattr(self, '_orch_log'):
+            self._orch_log('contract_ratify', 'kernel', {'key': key, 'new_version': new_version, 'affected': affected})
         return {"key": key, "new_version": new_version, "affected": affected}
 
     def get_contract(self, key: str, consumer_id: str, lock_version: int | None = None) -> dict:
@@ -375,6 +379,7 @@ class OrganizationOrchestrator:
         self.contracts = ContractStore(
             self.states_dir / f"contracts-{self.session_id}.json"
         )
+        self.contracts._orch_log = self.log_event
         self._cycles_by_layer: dict[int, int] = {}
         self._failures: dict[str, int] = {}
         # Optional bridge to loop-engineering + skill-attention + auto-summary+memory.
@@ -495,6 +500,7 @@ class OrganizationOrchestrator:
         # 绑定skill来自registry,是亲测强制化的对象(不是建议)
         node.bound_skill = self._roles[role].get("skill_hint")
         self.org[node.node_id] = node
+        self.log_event("executor_created", node.node_id, {"role": role, "department": department, "bound_skill": node.bound_skill})
         return node
 
     def add_manager(self, role: str, department: str, parent: str | None,
@@ -506,6 +512,7 @@ class OrganizationOrchestrator:
         )
         node.bound_skill = self._roles[role].get("skill_hint")
         self.org[node.node_id] = node
+        self.log_event("manager_created", node.node_id, {"role": role, "department": department, "bound_skill": node.bound_skill})
         return node
 
     def channel_handle(self, executor_id: str) -> ChannelHandle:
@@ -540,6 +547,11 @@ class OrganizationOrchestrator:
             skill_manifest=skill_manifest,
         )
         node.accountability = acc
+        self.log_event("skill_used", node.node_id,
+                       {"skill": skill_manifest.skill_used if skill_manifest else None,
+                        "bound_skill": node.bound_skill,
+                        "evidence_len": len(skill_manifest.evidence) if skill_manifest else 0,
+                        "did": did[:60]})
         return acc
 
     def set_delegation(self, manager_id: str, child_ids: list[str]):
@@ -600,8 +612,10 @@ class OrganizationOrchestrator:
                     reasons.append(f"evidence doesn't match skill content: {ev_res.get('reason')}")
         if reasons:
             self._set_audit(node, "rejected", "; ".join(reasons))
+            self.log_event("audit", node.node_id, {"reason": "; ".join(reasons), "result": "rejected"})
             return "rejected"
         self._set_audit(node, "approved", "")
+        self.log_event("audit", node.node_id, {"reason": "approved", "result": "approved"})
         return "approved"
 
     def _set_audit(self, node, status, reason):
@@ -628,6 +642,7 @@ class OrganizationOrchestrator:
             return True  # idempotent
         node.product_keys.append(product_key)
         node.status = "done"
+        self.log_event("product_key", node.node_id, {"key": product_key, "total_keys": len(node.product_keys)})
         return True
 
     def collect_and_audit_chain(self, manager_id: str) -> dict:
@@ -649,9 +664,11 @@ class OrganizationOrchestrator:
             self._record_escalation({"gateway": 2, "manager": manager_id,
                                     "reason": "downstream audit rejected",
                                     "rejected": [c for c, v in audit_results.items() if v != "approved"]})
+            self.log_event("collect", manager_id, {"collected": False, "audit": audit_results})
             return {"collected": False, "audit": audit_results}
         # 主管自审(它要把下游成果整合成部门产出,自审did/how/evidence)
         own = self.audit_accountability(manager_id)
+        self.log_event("collect", manager_id, {"collected": True, "audit": audit_results, "own": own})
         return {"collected": own == "approved", "audit": audit_results, "own": own}
 
     def trace_accountability(self, top_id: str | None = None) -> list[dict]:
@@ -711,6 +728,7 @@ class OrganizationOrchestrator:
     def deliberate(self, task_description: str) -> dict:
         """L1 deliberation: feasibility / necessity / budget + recommendation.
         Returns an escalation payload for the user to approve (gateway #1)."""
+        self.log_event("gateway", "kernel", {"gateway": 1, "task": task_description[:80]})
         return {
             "gateway": 1,
             "feasibility": "on",
@@ -734,6 +752,7 @@ class OrganizationOrchestrator:
         for dep in deps:
             mgr = self.add_manager("manager_decompose", dep, parent=arch_mgr.node_id, depth=2)
             plan["departments"].append({"department": dep, "manager_id": mgr.node_id})
+        self.log_event("decompose", "kernel", {"departments": departments})
         return plan
 
     def run_meeting(self, manager_verdicts: dict[str, str], cycle: int,
@@ -744,6 +763,8 @@ class OrganizationOrchestrator:
         from multiagent_orchestrator import Orchestrator as _FlatOrch
         flat = _FlatOrch()
         decision = flat.apply_veto_rules(manager_verdicts, cycle, max_cycles)
+        self.log_event("meeting", "kernel",
+                       {"cycle": cycle, "decision": decision, "verdicts": manager_verdicts})
         self._cycles_by_layer.setdefault(2, 0)
         self._cycles_by_layer[2] = max(self._cycles_by_layer.get(2, 0), cycle)
         # escalate at budget exhaustion is the user-arbitration gateway (#2).
@@ -819,6 +840,7 @@ class OrganizationOrchestrator:
             node = self.add_executor(ex["role"], ex["department"], manager_id, depth=3)
             node.status = "dispatched"
             nodes.append(node)
+            self.log_event("dispatched", manager_id, {"role": ex["role"], "department": ex["department"], "node_id": node.node_id})
         return nodes
 
     # ---- send-back loop (spec §6) ----
@@ -831,6 +853,8 @@ class OrganizationOrchestrator:
         layer = node.depth if node else 3
         self._cycles_by_layer[layer] = self._cycles_by_layer.get(layer, 0) + 1
         cycles = self._cycles_by_layer[layer]
+        self.log_event("send_back", target_id,
+                       {"layer": layer, "cycles": cycles, "triple": triple})
         # Same product + same reason twice in a row -> auto-escalate one layer.
         prev = self._messages[-1] if self._messages else None
         if cycles > MAX_CYCLES_PER_LAYER:
@@ -849,6 +873,7 @@ class OrganizationOrchestrator:
     def record_failure(self, executor_id: str) -> str:
         n = self._failures.get(executor_id, 0) + 1
         self._failures[executor_id] = n
+        self.log_event("failure", executor_id, {"count": n, "node_id": executor_id})
         if n == 1:
             return "retry"
         node = self.org.get(executor_id)
@@ -879,6 +904,8 @@ class OrganizationOrchestrator:
         if self.bridge is None:
             return []
         rec = self.bridge.skill_recommend(task_text, top_k=top_k)
+        self.log_event("skill_recommend", "kernel",
+                       {"role": role, "task": task_text[:60], "unavailable": rec.get("unavailable", False)})
         if rec.get("unavailable"):
             return []
         # try to extract a list of skill names from many possible response shapes
@@ -912,6 +939,9 @@ class OrganizationOrchestrator:
 
     def report_to_user(self) -> dict:
         """Gateway #3: final collection -> user decision."""
+        self.log_event("gateway", "kernel",
+                       {"gateway": 3, "org_size": len(self.org),
+                        "escalations": len(self.state().get("escalations", []))})
         return {
             "gateway": 3,
             "org_size": len(self.org),

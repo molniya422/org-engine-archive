@@ -1,7 +1,7 @@
 {
   "version": "2.2",
-  "sessions": 1,
-  "last_session": "2026-06-27T08:00:59.387335+00:00",
+  "sessions": 3,
+  "last_session": "2026-07-28T09:11:18.154634+00:00",
   "last_optimized": "",
   "global": {
     "ema_lambda": 0.1818,
