@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useSkillsStore } from '@/stores/skills-store';
+import { useOrgStore } from '@/stores/org-store';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,13 +20,18 @@ const TYPE_LABEL: Record<string, string> = {
   skill: '技能',
   decision: '决策',
   parallel: '并行',
+  channel: '频道',
+  meeting: '会议',
 };
 
-const KNOWN_TYPES = ['agent', 'skill', 'decision', 'parallel'] as const;
+const KNOWN_TYPES = ['agent', 'skill', 'decision', 'parallel', 'channel', 'meeting'] as const;
 
 export function PropertiesPanel() {
   const { selectedNode, updateNodeData, setSelectedNode, removeNodeById } = useWorkflowStore();
   const { skills, fetchSkills } = useSkillsStore();
+  const currentOrg = useOrgStore((s) => s.currentOrg);
+  // org 角色注册表：role_ref 强绑定下拉的数据源
+  const orgRoles = currentOrg?.org?.departments?.flatMap((d: any) => d.roles ?? []) ?? [];
 
   // 加载当前技能库，供「技能」下拉选择使用
   useEffect(() => {
@@ -107,6 +113,26 @@ export function PropertiesPanel() {
       {/* Agent 编辑器 */}
       {dataType === 'agent' && (
         <>
+          <div>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">组织角色 (role_ref)</Label>
+            <Select
+              value={(data.roleRef as string) || ''}
+              onValueChange={(v) => updateField('roleRef', v)}
+            >
+              <SelectTrigger className="mt-1 h-8 text-[12px]">
+                <SelectValue placeholder="绑定 org 角色…" />
+              </SelectTrigger>
+              <SelectContent>
+                {orgRoles.length === 0 && (
+                  <div className="px-2 py-1.5 text-[11px] text-muted-foreground">组织暂无角色，请先在组织页创建</div>
+                )}
+                {orgRoles.map((r: any) => (
+                  <SelectItem key={r.id} value={r.id}>{r.id} · {r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">role_ref 强绑定组织角色；运行时从 org 解析身份</p>
+          </div>
           <div>
             <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">角色</Label>
             <Input
@@ -247,6 +273,47 @@ export function PropertiesPanel() {
               <option value="any">任一完成 (首个即可)</option>
            </select>
          </div>
+        </>
+      )}
+
+      {/* Channel 编辑器 */}
+      {dataType === 'channel' && (
+        <div>
+          <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">频道 Key</Label>
+          <Input
+            value={(data.channelKey as string) || ''}
+            onChange={(e) => updateField('channelKey', e.target.value)}
+            className="mt-1"
+            placeholder="如 api-design"
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">共享通信频道；读写 ACL 由引擎端按角色 id 强制</p>
+        </div>
+      )}
+
+      {/* Meeting 编辑器 */}
+      {dataType === 'meeting' && (
+        <>
+          <div>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">会议类型</Label>
+            <select
+              className="mt-1 flex h-10 w-full rounded-sm border border-input bg-background px-3 py-2 text-[12.5px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              value={(data.meetingType as string) || 'ministerial'}
+              onChange={(e) => updateField('meetingType', e.target.value)}
+            >
+              <option value="dept_internal">部门内</option>
+              <option value="ministerial">部长级</option>
+              <option value="decision">决策</option>
+            </select>
+          </div>
+          <div>
+            <Label className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground">议程</Label>
+            <textarea
+              className="mt-1 w-full min-h-[60px] rounded-sm border border-input bg-background px-3 py-2 font-mono text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+              value={(data.agenda as string) || ''}
+              onChange={(e) => updateField('agenda', e.target.value)}
+              placeholder="会议要解决什么？"
+            />
+          </div>
         </>
       )}
 

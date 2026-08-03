@@ -29,6 +29,8 @@ interface WorkflowState {
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
+  edgeKind: 'flow' | 'message';
+  setEdgeKind: (kind: 'flow' | 'message') => void;
   addNode: (type: string, position: { x: number; y: number }) => void;
   setSelectedNode: (node: Node<WorkflowNodeData> | null) => void;
   updateNodeData: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
@@ -89,22 +91,35 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   onConnect: (connection) => {
     const state = get();
+    const edgeKind = state.edgeKind ?? 'flow';
     const past = [...state.past, { nodes: JSON.parse(JSON.stringify(state.nodes)), edges: JSON.parse(JSON.stringify(state.edges)) }];
     if (past.length > 50) past.shift();
-    set({ edges: addEdge({ ...connection, animated: true }, state.edges), past, future: [] });
+    // flow 边动画，message 边静态虚线；边数据带 kind 供消息/样式区分
+    const isMessage = edgeKind === 'message';
+    set({ edges: addEdge({
+      ...connection,
+      animated: !isMessage,
+      data: { kind: edgeKind },
+      style: isMessage ? { strokeDasharray: '6 4' } : undefined,
+    }, state.edges), past, future: [] });
   },
+
+  edgeKind: 'flow',
+  setEdgeKind: (kind) => set({ edgeKind: kind }),
 
   addNode: (type, position) => {
     const state = get();
     const id = `node_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     // stageKind 到 node type 的映射（以兼容后端 playbook 数据格式）
-    const normalizedType = type === 'agent' || type === 'skill' || type === 'decision' || type === 'parallel' ? type : 'agent';
+    const normalizedType = type === 'agent' || type === 'skill' || type === 'decision' || type === 'parallel' || type === 'channel' || type === 'meeting' ? type : 'agent';
     const baseData: WorkflowNodeData = (() => {
       switch (normalizedType) {
         case 'agent': return { type: 'agent' as const, role: '新智能体', goal: '填写目标', backstory: '', llm: 'default', skills: [] };
         case 'skill': return { type: 'skill' as const, skillId: 'web-search', params: {}, timeout: 60 };
         case 'decision': return { type: 'decision' as const, condition: 'true', branches: {} };
         case 'parallel': return { type: 'parallel' as const, branches: [], mergeStrategy: 'all' as const };
+        case 'channel': return { type: 'channel' as const, channelKey: '新频道', acl: { read: [], write: [] } };
+        case 'meeting': return { type: 'meeting' as const, meetingType: 'ministerial' as const, participants: { from: 'managers' as const, roles: [] }, agenda: '', output: { write_to: ['channel'] as const } };
         default: return { type: 'agent' as const, role: '新智能体', goal: '', backstory: '', llm: 'default', skills: [] };
       }
     })();

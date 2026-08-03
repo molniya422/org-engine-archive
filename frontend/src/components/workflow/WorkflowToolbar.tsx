@@ -16,7 +16,7 @@ import { toast } from '@/stores/toast-store';
 import { api } from '@/api/client';
 import { Separator } from '@/components/ui/separator';
 import {
-  User, Wrench, GitFork, Zap, Undo2, Redo2, LayoutGrid, Check, Trash2, Save, Loader2,
+  User, Wrench, GitFork, Zap, Radio, Users, Undo2, Redo2, LayoutGrid, Check, Trash2, Save, Loader2,
 } from 'lucide-react';
 
 const nodeTypes = [
@@ -24,10 +24,12 @@ const nodeTypes = [
   { type: 'skill', label: '技能', icon: Wrench },
   { type: 'decision', label: '决策', icon: GitFork },
   { type: 'parallel', label: '并行', icon: Zap },
+  { type: 'channel', label: '频道', icon: Radio },
+  { type: 'meeting', label: '会议', icon: Users },
 ];
 
 export function WorkflowToolbar({ orgId }: { orgId?: string }) {
-  const { nodes, selectedNode, clearWorkflow, undo, redo, canUndo, canRedo, autoLayout, validateWorkflow, removeNodeById, generateFromOrg } = useWorkflowStore();
+  const { nodes, selectedNode, clearWorkflow, undo, redo, canUndo, canRedo, autoLayout, validateWorkflow, removeNodeById, generateFromOrg, edgeKind, setEdgeKind } = useWorkflowStore();
   const currentOrg = useOrgStore((s) => s.currentOrg);
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -96,6 +98,17 @@ export function WorkflowToolbar({ orgId }: { orgId?: string }) {
            </div>
           );
         })}
+        <Separator orientation="vertical" className="h-6 mx-2" />
+        <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground">连接</span>
+        <select
+          className="h-7 rounded-sm border border-input bg-background px-2 text-[12px] cursor-pointer"
+          value={edgeKind}
+          onChange={(e) => setEdgeKind(e.target.value as 'flow' | 'message')}
+          title="选择要创建的连接类型：流程边 / 消息边"
+        >
+          <option value="flow">流程边</option>
+          <option value="message">消息边</option>
+        </select>
         <Separator orientation="vertical" className="h-6 mx-2" />
         <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo()} title="撤销 (Ctrl+Z)">
           <Undo2 size={13} />
