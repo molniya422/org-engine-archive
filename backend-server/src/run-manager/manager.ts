@@ -30,7 +30,7 @@ export class RunManager extends EventEmitter {
 
   get current(): RunState | null { return this.state; }
 
-  async start(orgId: string, task: string, configPath: string, outputDir: string, leanHooksDir?: string): Promise<string> {
+  async start(orgId: string, task: string, configPath: string, outputDir: string, leanHooksDir?: string, workflowPath?: string): Promise<string> {
     const runId = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     this.state = { runId, status: 'queued', gateway: null, orgId, task, events: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     await this.persistence.save(runId, this.state);
@@ -39,7 +39,7 @@ export class RunManager extends EventEmitter {
     this.client.on('stderr', (data: string) => this.emit('stderr', data));
     this.state.status = 'running';
     await this.persistence.save(runId, this.state);
-    await this.client.start(configPath, task, outputDir, leanHooksDir).catch(async err => { await this.block(err.message); });
+    await this.client.start(configPath, task, outputDir, leanHooksDir, workflowPath).catch(async err => { await this.block(err.message); });
     return runId;
   }
 

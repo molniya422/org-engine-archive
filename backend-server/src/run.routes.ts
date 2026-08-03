@@ -49,13 +49,13 @@ export function registerRunRoutes(app: FastifyInstance, runManager: RunManager, 
     return { runs: matches.slice(0, limit) };
   });
 
-  app.post<{ Body: { org_id: string; task: string; config_path?: string } }>('/api/v1/runs', async (req, reply) => {
-    const { org_id, task, config_path } = req.body;
+  app.post<{ Body: { org_id: string; task: string; config_path?: string; workflow_path?: string } }>('/api/v1/runs', async (req, reply) => {
+    const { org_id, task, config_path, workflow_path } = req.body;
     if (!org_id || !task) { reply.code(400); return { error: 'org_id and task required' }; }
     const home = homedir();
     const defaultConfigPath = join(home, '.org-engine-editor', 'orgs', `${org_id}.yaml`);
     const defaultOutputDir = join(home, '.org-engine-editor', 'runs');
-    const runId = await runManager.start(org_id, task, config_path || defaultConfigPath, defaultOutputDir);
+    const runId = await runManager.start(org_id, task, config_path || defaultConfigPath, defaultOutputDir, undefined, workflow_path);
     reply.code(201); return { run_id: runId };
   });
   app.get<{ Params: { id: string } }>('/api/v1/runs/:id', async (req, reply) => {

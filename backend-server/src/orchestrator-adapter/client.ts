@@ -13,7 +13,7 @@ export class OrchestratorClient extends EventEmitter {
   private _active = false;
   get active(): boolean { return this._active; }
 
-  async start(configPath: string, taskDescription: string, outputDir: string, cwd?: string): Promise<void> {
+  async start(configPath: string, taskDescription: string, outputDir: string, cwd?: string, workflowPath?: string): Promise<void> {
     if (this._active) throw new Error('Adapter already active');
 
     // Detect if running in a packaged Electron app
@@ -46,7 +46,12 @@ export class OrchestratorClient extends EventEmitter {
     this.process.on('exit', (code) => { this._active = false; this.emit('exit', code); });
     this.process.stderr?.on('data', (data: Buffer) => { this.emit('stderr', data.toString()); });
     this._active = true;
-    return this.call('start_run', { org_config_path: configPath, task_description: taskDescription, output_dir: outputDir }).then(() => undefined);
+    return this.call('start_run', {
+      org_config_path: configPath,
+      task_description: taskDescription,
+      output_dir: outputDir,
+      ...(workflowPath ? { workflow_path: workflowPath } : {}),
+    }).then(() => undefined);
   }
 
   async submitDecision(gateway: string, decision: unknown): Promise<void> {
