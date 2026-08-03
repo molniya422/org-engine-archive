@@ -2,6 +2,8 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import type { FastifyInstance } from 'fastify';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { registerOrgRoutes } from './org-config.routes';
 import { registerSkillRoutes } from './skill-scanner.routes';
 import { registerRunRoutes } from './run.routes';
@@ -14,6 +16,7 @@ import { registerHealthRoutes } from './health/routes.js';
 import { OrgConfigStore } from './org-config/store';
 import { WorkflowConfigStore } from './workflow-config/store';
 import { registerWorkflowRoutes } from './workflow.routes';
+import { registerInsightsRoutes } from './insights.routes';
 import { SkillPool } from './skill-scanner/pool';
 import { OrchestratorClient } from './orchestrator-adapter/client';
 import { RunManager } from './run-manager/manager';
@@ -51,6 +54,7 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   registerTemplateRoutes(app);
   registerPlaybookRoutes(app);
   registerHealthRoutes(app);
+  registerInsightsRoutes(app, join(homedir(), '.org-engine-editor', 'state'));
 
   // Expose store to health route via app decorator (typed)
   (app as any)._orgStore = store;
