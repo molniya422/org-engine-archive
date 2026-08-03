@@ -682,12 +682,27 @@ class OrganizationOrchestrator:
         if node.accountability is None or node.accountability.audit_status != "approved":
             if node.accountability is None:
                 self._set_audit(node, "rejected", "product requested w/o audit")
+            # 拒签也落盘：产物注册表的 blocked 状态来自这里
+            self._append_line("products.jsonl", {
+                "kind": "deny", "role": node.role, "key": product_key,
+                "audit_status": node.accountability.audit_status,
+                "audit_reason": node.accountability.audit_reason,
+                "ts": _now_iso(),
+            })
             return False
         if product_key in node.product_keys:
             return True  # idempotent
         node.product_keys.append(product_key)
         node.status = "done"
         self.log_event("product_key", node.node_id, {"key": product_key, "total_keys": len(node.product_keys)})
+        m = node.accountability.skill_manifest
+        self._append_line("products.jsonl", {
+            "kind": "allow", "role": node.role, "key": product_key,
+            "audit_status": node.accountability.audit_status,
+            "skill_used": m.skill_used if m else None,
+            "evidence": m.evidence if m else None,
+            "ts": _now_iso(),
+        })
         return True
 
     def collect_and_audit_chain(self, manager_id: str) -> dict:
