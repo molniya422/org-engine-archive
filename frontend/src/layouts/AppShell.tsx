@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ShieldCheck,
   ArrowLeft,
+  CalendarDays,
 } from 'lucide-react';
 
 /**
@@ -56,6 +57,7 @@ export function AppShell() {
     { to: '/', end: true, icon: LayoutDashboard, label: t('nav.home') },
     { to: '/templates', end: false, icon: SwatchBook, label: t('Playbooks') },
     { to: '/skills', end: false, icon: Cpu, label: t('nav.skills') },
+    { to: '/meetings', end: false, icon: CalendarDays, label: '会议记录' },
   ];
 
   return (

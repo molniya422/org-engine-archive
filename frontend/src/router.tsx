@@ -6,6 +6,7 @@ import { RunMonitorView } from './views/RunMonitorView';
 import { SkillsView } from './views/SkillsView';
 import { HealthView } from './views/HealthView';
 import { PlaybookLibrary } from './components/playbook/PlaybookLibrary';
+import { MeetingsView } from './views/MeetingsView';
 
 /**
  * MUST use HashRouter for Electron packaged builds.
@@ -22,6 +23,7 @@ export const router = createHashRouter([
       { path: 'studio/:orgId', element: <StudioView /> },
       { path: 'studio/:orgId/runs/:runId', element: <RunMonitorView /> },
       { path: 'skills', element: <SkillsView /> },
+      { path: 'meetings', element: <MeetingsView /> },
       { path: 'health', element: <HealthView /> },
       { path: 'templates', element: <PlaybookLibrary /> },
       { path: '*', element: <Navigate to="/" replace /> },
