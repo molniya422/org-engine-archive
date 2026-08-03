@@ -15,6 +15,22 @@ async function getWsHost(): Promise<string> {
 
 type MessageHandler = (data: any) => void;
 
+/** Well-known event types the RunWsClient may receive. */
+export type RunWsEvent =
+  | { type: 'phase_started'; layer: string; phase: string }
+  | { type: 'executor_dispatched'; role: string; dept: string; node_id: string }
+  | { type: 'executor_completed'; node_id: string; skill_used: string; verdict: string }
+  | { type: 'audit_passed'; node_id: string }
+  | { type: 'audit_failed'; node_id: string; reason: string }
+  | { type: 'product_key_issued'; node_id: string; product_key: string }
+  | { type: 'gateway_prompt'; gateway: string; context: unknown; question: string }
+  | { type: 'run_completed'; status: 'success' | 'blocked' | 'cancelled'; error?: string }
+  // ── workflow v2 事件 ──
+  | { type: 'meeting_started'; meeting: { type: string; dept?: string; participants: string[] } }
+  | { type: 'meeting_cycle'; meeting: { type: string; cycle: number; verdicts: Record<string, string>; decision: string } }
+  | { type: 'message_mediated'; message: { sender: string; recipient: string; channel?: string; verdict: string; reason: string } }
+  | { type: 'decision_recorded'; decision: { meeting: string; output: unknown; target: string } };
+
 export class RunWsClient {
   private ws: WebSocket | null = null;
   private handlers = new Set<MessageHandler>();

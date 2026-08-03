@@ -78,3 +78,47 @@ export interface Contract {
   dependents?: string[];
   [k: string]: unknown;
 }
+
+/* ------------------------------------------------------------------ */
+/* WorkflowConfig v2.0 —— 手动补充（源 schema: schema/workflow-config.schema.json） */
+/* ------------------------------------------------------------------ */
+
+export type WorkflowNodeType = 'agent' | 'skill' | 'decision' | 'parallel' | 'channel' | 'meeting';
+
+export interface WorkflowMeetingNode {
+  type: 'dept_internal' | 'ministerial' | 'decision';
+  participants?: {
+    from?: 'department' | 'managers' | 'exec_roles' | 'explicit';
+    department?: string;
+    roles?: string[];
+  };
+  channel?: string;
+  agenda?: string;
+  output?: { write_to?: ('channel' | 'flow')[] };
+}
+
+export interface WorkflowChannelNode {
+  key: string;
+  acl?: { read?: string[]; write?: string[] };
+}
+
+export interface WorkflowConfig {
+  version: '2.0';
+  name: string;
+  triggers?: string[];
+  nodes: {
+    id: string;
+    type: WorkflowNodeType;
+    role_ref?: string;
+    override?: Record<string, unknown>;
+    meeting?: WorkflowMeetingNode;
+    channel?: WorkflowChannelNode;
+    [k: string]: unknown;
+  }[];
+  edges?: {
+    id: string;
+    source: string;
+    target: string;
+    kind: 'flow' | 'message';
+  }[];
+}

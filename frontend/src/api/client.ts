@@ -120,10 +120,10 @@ export const api = {
   getActiveRun: () => request<any>('/api/v1/runs'),
   listRuns: (orgId: string, limit = 10) =>
     request<{ runs: any[] }>(`/api/v1/runs?org_id=${encodeURIComponent(orgId)}&limit=${limit}`),
-  startRun: (orgId: string, task: string, configPath?: string) =>
+  startRun: (orgId: string, task: string, configPath?: string, workflowPath?: string) =>
     request<{ run_id: string }>('/api/v1/runs', {
       method: 'POST',
-      body: JSON.stringify({ org_id: orgId, task, config_path: configPath }),
+      body: JSON.stringify({ org_id: orgId, task, config_path: configPath, workflow_path: workflowPath }),
     }),
   getRun: (id: string) => request<any>(`/api/v1/runs/${id}`),
   submitDecision: (runId: string, gateway: string, decision: unknown) =>
@@ -155,4 +155,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ mode, params, orgId }),
     }),
+
+  // Workflows (workflow-config v2)
+  listWorkflows: () => request<string[]>('/api/v1/workflows'),
+  getWorkflow: (id: string) => request<any>(`/api/v1/workflows/${id}`),
+  saveWorkflow: (id: string, data: unknown) =>
+    request<any>(`/api/v1/workflows/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteWorkflow: (id: string) =>
+    request<any>(`/api/v1/workflows/${id}`, { method: 'DELETE' }),
+  validateWorkflow: (data: unknown) =>
+    request<any>(`/api/v1/workflows/x/validate`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Insights (meetings / comm audit / product registry)
+  getInsights: () => request<any>('/api/v1/insights'),
 };
