@@ -217,6 +217,66 @@ def test_configure_workflow_wires_edges_and_channels():
     _reset_wf_state()
 
 
+# ---------------------------------------------------------------------------
+# Task 2.5: meeting types (dept_internal / ministerial / decision)
+# ---------------------------------------------------------------------------
+
+def _meeting_org(department='Arch'):
+    """One manager + isolated orchestrator. Uses REGISTRY-legal roles because
+    add_executor validates against self._roles (KeyError otherwise)."""
+    from organization_orchestrator import OrganizationOrchestrator
+    orch = OrganizationOrchestrator(
+        states_dir=Path(tempfile.mkdtemp(prefix='meet-')), session_id='t')
+    mgr = orch.add_manager('manager_decompose', department, parent=None, depth=2)
+    return orch, mgr
+
+
+def test_meeting_participants_dept_internal():
+    orch, mgr = _meeting_org(department='FE')
+    e1 = orch.add_executor('fe_page_builder', 'FE', mgr.node_id, depth=3)
+    e2 = orch.add_executor('fe_ui_system', 'FE', mgr.node_id, depth=3)
+    orch.add_executor('implementer', 'BE', mgr.node_id, depth=3)  # 他部门，不应出现
+    parts = orch.meeting_participants('dept_internal', department='FE')
+    assert set(parts) == {e1.node_id, e2.node_id}
+
+
+def test_meeting_participants_ministerial():
+    orch, mgr = _meeting_org()
+    ex = orch.add_executor('implementer', 'BE', mgr.node_id, depth=3)
+    parts = orch.meeting_participants('ministerial')
+    assert mgr.node_id in parts        # 部门主管在列
+    assert ex.node_id not in parts     # 执行者不在列
+
+
+def test_meeting_participants_decision_includes_executors():
+    orch, mgr = _meeting_org()
+    ex = orch.add_executor('implementer', 'BE', mgr.node_id, depth=3)
+    parts = orch.meeting_participants('decision')
+    assert ex.node_id in parts
+    # registry 当前无 can_veto → decision = 纯执行层；断言只锁 executor 语义
+    assert any(orch.org[p].kind == 'executor' for p in parts)
+
+
+def test_meeting_participants_explicit_overrides_type():
+    orch, mgr = _meeting_org(department='Arch')
+    ex = orch.add_executor('architect', 'Arch', mgr.node_id, depth=3)
+    parts = orch.meeting_participants('dept_internal', department='BE', explicit=[ex.node_id])
+    assert parts == [ex.node_id]
+
+
+def test_run_meeting_type_param_accepted():
+    orch, mgr = _meeting_org()
+    orch.add_executor('implementer', 'BE', mgr.node_id, depth=3)
+    decision = orch.run_meeting(
+        {'reviewer': 'APPROVE', 'tester': 'PASS', 'architect': 'APPROVE'},
+        cycle=1, meeting_type='ministerial',
+    )
+    # apply_veto_rules 的完整词汇表
+    assert decision in ('accept', 'revise', 'escalate')
+    # 会议事件写入审计日志（含 meeting_type / participants）
+    assert any(e.get('event_type') == 'meeting' for e in orch.audit_log)
+
+
 if __name__ == '__main__':
     import traceback
     failed = 0

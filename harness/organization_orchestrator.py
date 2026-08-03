@@ -418,7 +418,22 @@ class OrganizationOrchestrator:
         self.audit_log: list[dict] = []
         # workflow-config v2 meetings configured via configure_workflow()
         self._meetings: list = []
+        # permissions lookup: can_veto — designates decision-meeting voters
+        self._can_veto_cache: dict[str, bool] = {}
         self._init_state()
+
+    def _is_can_veto(self, node_id: str) -> bool:
+        """Whether the role bound to a node has decision-meeting veto power."""
+        node = self.org.get(node_id)
+        if node is None:
+            return False
+        if node_id in self._can_veto_cache:
+            return self._can_veto_cache[node_id]
+        role_meta = self._roles.get(node.role, {})
+        perms = role_meta.get('permissions', {}) if isinstance(role_meta, dict) else {}
+        veto = bool(role_meta.get('can_veto') or perms.get('can_veto'))
+        self._can_veto_cache[node_id] = veto
+        return veto
 
     # ---- audit log: 每条事件都带时间戳 + actor + event_type + details ----
 
@@ -809,14 +824,51 @@ class OrganizationOrchestrator:
         self.log_event("decompose", "kernel", {"departments": departments})
         return plan
 
+    def meeting_participants(self, meeting_type: str,
+                             department: str | None = None,
+                             explicit: list[str] | None = None) -> list[str]:
+        """Resolve a meeting's participant node-id list from its type.
+
+        - dept_internal: 单部门全部 executor（主持人=部门主管）
+        - decision:      全部 executor + 拥有 can_veto 的节点（执行层投票）
+        - ministerial:   各部门 manager（默认/缺省）
+        - 显式列表优先（显式 > 类型推导）
+        """
+        if explicit:
+            return [nid for nid in explicit if nid in self.org]
+        if meeting_type == 'dept_internal':
+            return [nid for nid, n in self.org.items()
+                    if n.kind == 'executor' and n.department == department]
+        if meeting_type == 'decision':
+            base = [nid for nid, n in self.org.items() if n.kind == 'executor']
+            vetoers = [nid for nid, n in self.org.items()
+                       if n.kind == 'manager' and self._is_can_veto(nid)]
+            return base + vetoers
+        # ministerial（默认）
+        return [nid for nid, n in self.org.items() if n.kind == 'manager']
+
     def run_meeting(self, manager_verdicts: dict[str, str], cycle: int,
-                    max_cycles: int = MAX_CYCLES_PER_LAYER) -> str:
+                    max_cycles: int = MAX_CYCLES_PER_LAYER,
+                    meeting_type: str = 'ministerial',
+                    department: str | None = None,
+                    explicit: list[str] | None = None) -> str:
         """Cross-department manager meeting — multi-round, until no new conflicts
         or cycle budget expended. Uses the flat orchestrator's veto vocabulary
-        (accept/revise/escalate) so meeting outcomes map to the same semantics."""
+        (accept/revise/escalate) so meeting outcomes map to the same semantics.
+
+        meeting_type: 'ministerial' | 'dept_internal' | 'decision'（见
+        meeting_participants）。参与者推导后写入审计日志，供会议事件上抛。
+        """
         from multiagent_orchestrator import Orchestrator as _FlatOrch
         flat = _FlatOrch()
+        participants = self.meeting_participants(
+            meeting_type, department=department, explicit=explicit)
         decision = flat.apply_veto_rules(manager_verdicts, cycle, max_cycles)
+        self.log_event("meeting", "kernel",
+                       {"cycle": cycle, "decision": decision,
+                        "verdicts": manager_verdicts,
+                        "meeting_type": meeting_type,
+                        "participants": participants})
         self.log_event("meeting", "kernel",
                        {"cycle": cycle, "decision": decision, "verdicts": manager_verdicts})
         self._cycles_by_layer.setdefault(2, 0)

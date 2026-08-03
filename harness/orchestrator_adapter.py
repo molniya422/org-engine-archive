@@ -308,10 +308,32 @@ class OrchestratorAdapter:
         # L2 manager meeting (simulated verdicts; real LLM subagents
         # would provide these in a production deployment)
         self.emit_event("phase_started", layer="L2", phase="meeting")
-        meeting = self._orch.run_meeting(
-            {"reviewer": "APPROVE", "tester": "PASS", "architect": "APPROVE"},
-            cycle=1,
-        )
+        # workflow v2：若配置了显式会议节点，首个会议按其类型运行；
+        # 否则回落到默认 ministerial 会议。
+        wf_meetings = self._workflow.get('meetings', []) if self._workflow else []
+        if wf_meetings:
+            m = wf_meetings[0]
+            mt = m.get('type', 'ministerial')
+            dept = m.get('participants', {}).get('department')
+            self.emit_meeting_started({
+                "type": mt, "participants": [], "dept": dept,
+            })
+            meeting = self._orch.run_meeting(
+                {"reviewer": "APPROVE", "tester": "PASS", "architect": "APPROVE"},
+                cycle=1,
+                meeting_type=mt,
+                department=dept,
+            )
+            self.emit_meeting_cycle({
+                "type": mt, "cycle": 1,
+                "verdicts": {"reviewer": "APPROVE", "tester": "PASS", "architect": "APPROVE"},
+                "decision": meeting,
+            })
+        else:
+            meeting = self._orch.run_meeting(
+                {"reviewer": "APPROVE", "tester": "PASS", "architect": "APPROVE"},
+                cycle=1,
+            )
         self.emit_event("audit_passed", node_id="meeting")
 
         if meeting == "escalate":
