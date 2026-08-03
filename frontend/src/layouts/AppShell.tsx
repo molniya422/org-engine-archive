@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ArrowLeft,
   CalendarDays,
+  Radar,
 } from 'lucide-react';
 
 /**
@@ -58,6 +59,7 @@ export function AppShell() {
     { to: '/templates', end: false, icon: SwatchBook, label: t('Playbooks') },
     { to: '/skills', end: false, icon: Cpu, label: t('nav.skills') },
     { to: '/meetings', end: false, icon: CalendarDays, label: '会议记录' },
+    { to: '/comm', end: false, icon: Radar, label: '通信审计' },
   ];
 
   return (
