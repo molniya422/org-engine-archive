@@ -1,0 +1,12 @@
+{
+  "name": "org-engine",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test:engine": "python -m pytest engine/learning/tests -q",
+    "test:backend": "cd editor/backend-server && npm test",
+    "test:frontend": "cd editor/frontend && npm test",
+    "test": "npm run test:engine && npm run test:backend && npm run test:frontend",
+    "package:editor": "npm run test && cd editor && npm run build && npx electron-builder build --win"
+  }
+}
