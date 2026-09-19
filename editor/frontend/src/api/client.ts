@@ -168,4 +168,13 @@ export const api = {
 
   // Insights (meetings / comm audit / product registry)
   getInsights: () => request<any>('/api/v1/insights'),
+
+  // Learning loop (evolution events / report / proposals)
+  listLearningEvents: () => request<any[]>('/api/learning/events'),
+  getLearningReport: () => request<any>('/api/learning/report'),
+  listProposals: () => request<any[]>('/api/learning/proposals'),
+  approveProposal: (id: string) =>
+    request<any>(`/api/learning/proposals/${id}/approve`, { method: 'POST' }),
+  rejectProposal: (id: string) =>
+    request<any>(`/api/learning/proposals/${id}/reject`, { method: 'POST' }),
 };

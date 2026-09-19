@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type OrgEditorTab = 'structure' | 'workflow' | 'skills' | 'validation' | 'run';
+type OrgEditorTab = 'structure' | 'workflow' | 'skills' | 'validation' | 'run' | 'evolution';
 
 interface UiStoreState {
   sidebarCollapsed: boolean;

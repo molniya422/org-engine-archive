@@ -17,12 +17,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ValidationPanel } from '@/components/ValidationPanel';
 import { RunPanel } from '@/components/RunPanel';
+import { EvolutionPanel } from '@/components/EvolutionPanel';
 import { t } from '@/i18n';
 import {
-  GitBranch, Workflow, Cpu, ShieldCheck, Play, Plus, RefreshCw, CheckCircle, XCircle,
+  GitBranch, Workflow, Cpu, ShieldCheck, Play, Plus, RefreshCw, CheckCircle, XCircle, Sparkles,
 } from 'lucide-react';
 
-type EditorTab = 'structure' | 'workflow' | 'skills' | 'validation' | 'run';
+type EditorTab = 'structure' | 'workflow' | 'skills' | 'validation' | 'run' | 'evolution';
 
 const TAB_LABELS: Record<EditorTab, string> = {
   structure: '组织结构',
@@ -30,6 +31,7 @@ const TAB_LABELS: Record<EditorTab, string> = {
   skills: '技能绑定',
   validation: '校验',
   run: '运行',
+  evolution: '进化',
 };
 
 export function StudioView() {
@@ -233,6 +235,9 @@ export function StudioView() {
             <TabsTrigger value="run" className="text-[12px] gap-1.5">
               <Play size={14} /> {TAB_LABELS.run}
            </TabsTrigger>
+            <TabsTrigger value="evolution" className="text-[12px] gap-1.5">
+              <Sparkles size={14} /> {TAB_LABELS.evolution}
+           </TabsTrigger>
          </TabsList>
        </Tabs>
 
@@ -401,6 +406,11 @@ export function StudioView() {
                 </p>
               </div>
             )}
+          </div>
+        )}
+     {effectiveTab === 'evolution' && (
+          <div className="h-full overflow-y-auto">
+            <EvolutionPanel />
           </div>
         )}
      </div>
