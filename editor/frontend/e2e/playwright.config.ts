@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { E2E_HOME, E2E_LEARNING } from './learning-env';
 
 const BACKEND_PORT = 15172;
 const FRONTEND_PORT = 15173;
@@ -24,6 +25,12 @@ export default defineConfig({
     {
       command: `cross-env PORT=${BACKEND_PORT} npx tsx ../backend-server/src/server.ts`,
       port: BACKEND_PORT,
+      // 隔离 learning 闭环的 orgs/ 与 events/proposals,不碰真实 ~/.org-engine-editor
+      env: {
+        ORG_ENGINE_HOME: E2E_HOME,
+        ORG_ENGINE_LEARNING_DIR: E2E_LEARNING,
+        ...(process.env as Record<string, string>),
+      },
       ...sharedOpts,
     },
     {
