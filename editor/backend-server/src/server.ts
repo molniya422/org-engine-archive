@@ -17,6 +17,7 @@ import { OrgConfigStore } from './org-config/store';
 import { WorkflowConfigStore } from './workflow-config/store';
 import { registerWorkflowRoutes } from './workflow.routes';
 import { registerInsightsRoutes } from './insights.routes';
+import { learningRoutes } from './learning/routes';
 import { SkillPool } from './skill-scanner/pool';
 import { OrchestratorClient } from './orchestrator-adapter/client';
 import { RunManager } from './run-manager/manager';
@@ -55,6 +56,13 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   registerPlaybookRoutes(app);
   registerHealthRoutes(app);
   registerInsightsRoutes(app, join(homedir(), '.org-engine-editor', 'state'));
+
+  // Learning loop: evolution events / report / proposals (approve mutates org yaml + commits)
+  const home = process.env.ORG_ENGINE_HOME ?? join(homedir(), '.org-engine-editor');
+  // __dirname 仅存在于 CJS bundle;ESM/dev 下退回 cwd(与 validator.ts 同一守卫)
+  const here = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+  const learningDir = process.env.ORG_ENGINE_LEARNING_DIR ?? join(here, '../../../engine/data/learning');
+  await app.register(learningRoutes, { learningDir, orgsDir: join(home, 'orgs') });
 
   // Expose store to health route via app decorator (typed)
   (app as any)._orgStore = store;

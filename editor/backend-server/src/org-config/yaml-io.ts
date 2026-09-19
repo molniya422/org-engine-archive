@@ -3,11 +3,14 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { parse, stringify } from 'yaml';
 
-const BASE_DIR = join(homedir(), '.org-engine-editor', 'orgs');
+function orgsDir(): string {
+  return join(process.env.ORG_ENGINE_HOME ?? join(homedir(), '.org-engine-editor'), 'orgs');
+}
 
 function ensureDir(): string {
-  if (!existsSync(BASE_DIR)) mkdirSync(BASE_DIR, { recursive: true });
-  return BASE_DIR;
+  const dir = orgsDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return dir;
 }
 
 export function readOrgConfig(id: string): unknown {
