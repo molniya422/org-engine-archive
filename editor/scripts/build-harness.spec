@@ -7,18 +7,20 @@ Run from the org-engine-editor project root:
 import sys
 from pathlib import Path
 
-# Resolve paths: project root is where pyinstaller is called from
+# Resolve paths: project root is where pyinstaller is called from.
+# In the org-engine monorepo the Python engine lives in ../engine
+# (was ../lean-hooks before the monorepo merge).
 project_root = Path.cwd()
-lean_hooks = project_root / '..' / 'lean-hooks'
+engine = project_root / '..' / 'engine'
 
 a = Analysis(
     # Entry point
-    [str(lean_hooks / 'harness' / 'orchestrator_adapter.py')],
+    [str(engine / 'harness' / 'orchestrator_adapter.py')],
     # Search paths for imports
-    pathex=[str(lean_hooks)],
+    pathex=[str(engine)],
     binaries=[],
     datas=[
-        (str(lean_hooks / 'harness' / 'role-registry-org.yaml'), 'harness'),
+        (str(engine / 'harness' / 'role-registry-org.yaml'), 'harness'),
     ],
     hiddenimports=['yaml'],
     hookspath=[],
