@@ -1,0 +1,326 @@
+# Role Registry for the Hierarchical Multi-Agent Organization Engine (org-engine).
+#
+# This file is INDEPENDENT from role-registry.yaml (used by the flat
+# single-layer orchestrator). The flat orchestrator is NOT modified.
+# This file extends every role with a `department` field and adds
+# `manager` roles that model the self-similar recursive node shape
+# (decompose → dispatch → collect → review) described in
+# docs/superpowers/specs/2026-07-25-hierarchical-multi-agent-org-design.md
+#
+# Departments (orthogonal responsibility boundaries):
+#   Arch  — cross-cutting technical decisions, contract first-drafting, risk
+#   FE    — UI / client implementation
+#   BE    — services / data / business logic
+#   QA    — cross-department quality gate, acceptance criteria
+#   Docs  — user / API / architecture doc authoring
+# Optional specialized departments:
+#   Sec   — security review, permission model, dependency audit
+#   Data  — data pipelines, migration, analytics
+#   Design— design systems, visual consistency
+#
+# `department` on a role is what the channel-handle boundary enforcement
+# keys on. Same-department executors may talk; cross-department talk is
+# rejected and must go via the manager meeting (the kernel).
+
+roles:
+  # ----- executors (leaf nodes, 1 subagent + 1 bound skill) -----
+
+  implementer:
+    name: implementer
+    department: BE
+    description: "Implements the code change. Writes clean, tested code following TDD."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Implement the code change. Write clean, tested code.
+      Follow test-driven-development: write tests first, then implement.
+      Output ONLY the code changes (file paths and content).
+      Do NOT review your own work — that is the Reviewer's job.
+    skill_hint: test-driven-development
+    verdict_format: "IMPLEMENTED: <summary of changes>"
+    parallel_with: [designer]
+    veto_power: false
+    can_escalate: false
+
+  reviewer:
+    name: reviewer
+    department: QA
+    description: "Reviews code for correctness, style, and security issues."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Review the code changes for correctness, style, and security.
+      Provide a verdict: APPROVE, REQUEST_CHANGES, or VETO.
+    skill_hint: pr-review
+    verdict_format: "REVIEW: <APPROVE|REQUEST_CHANGES|VETO> — <reasoning>"
+    parallel_with: [tester, architect, security_auditor]
+    veto_power: true
+    can_escalate: true
+
+  tester:
+    name: tester
+    department: QA
+    description: "Writes and runs tests to verify the implementation."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Write and execute tests. Report results and coverage.
+    skill_hint: verification-before-completion
+    verdict_format: "TEST: <PASS|FAIL> — <results summary>"
+    parallel_with: [reviewer, architect, security_auditor]
+    veto_power: false
+    can_escalate: true
+
+  architect:
+    name: architect
+    department: Arch
+    description: "Evaluates architectural fit, module boundaries, and design patterns."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Evaluate the changes for architectural fit, module boundaries,
+      patterns, dependencies, backwards compatibility.
+      Provide an architectural assessment.
+    skill_hint: design-patterns
+    verdict_format: "ARCHITECT: <APPROVE|CONCERNS|VETO> — <assessment>"
+    parallel_with: [reviewer, tester, security_auditor]
+    veto_power: true
+    can_escalate: true
+
+  security_auditor:
+    name: security_auditor
+    department: Sec
+    description: "Audits for security vulnerabilities, secrets exposure, attack surface."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Audit the changes for security issues. Provide a security verdict.
+    skill_hint: security-guardian
+    verdict_format: "SECURITY: <PASS|CONCERN|VETO> — <findings>"
+    parallel_with: [reviewer, tester, architect]
+    veto_power: true
+    can_escalate: true
+
+  designer:
+    name: designer
+    department: Design
+    description: "Evaluates UX/UI design quality, accessibility, visual consistency."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Evaluate the changes for design quality. Provide a design assessment.
+    skill_hint: design-is
+    verdict_format: "DESIGN: <APPROVE|REVISION|VETO> — <assessment>"
+    parallel_with: [implementer]
+    veto_power: false
+    can_escalate: false
+
+  integrator:
+    name: integrator
+    department: Arch
+    description: "Runs AFTER the parallel phase to merge verdicts and resolve conflicts."
+    prompt_template: |
+      You are the {role_name} in a {mode} multi-agent workflow.
+      Department: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      You have received verdicts from all parallel roles. Merge feedback,
+      resolve conflicts (prefer safety-conservative stance), produce
+      PROCEED / REVISE / ESCALATE. If REVISE, specify what must change.
+    skill_hint: pathfinder
+    verdict_format: "INTEGRATE: <PROCEED|REVISE|ESCALATE> — <unified decision>"
+    parallel_with: []
+    veto_power: false
+    can_escalate: true
+
+  fe_page_builder:
+    name: fe_page_builder
+    department: FE
+    description: "FE executor: builds pages, delivers runnable components."
+    prompt_template: |
+      You are the {role_name} (department {department}) in an org-engine workflow.
+      Task: {task_description}
+
+      {context_block}
+
+      Build the page(s). Deliver runnable components. You may talk to
+      sibling executors inside department {department} only.
+    skill_hint: taste-skill
+    verdict_format: "FE_PAGES: <DONE|BLOCKED> — <which pages>"
+    parallel_with: [fe_ui_system]
+    veto_power: false
+    can_escalate: false
+
+  fe_ui_system:
+    name: fe_ui_system
+    department: FE
+    description: "FE executor: owns the design system / component library."
+    prompt_template: |
+      You are the {role_name} (department {department}) in an org-engine workflow.
+      Task: {task_description}
+
+      {context_block}
+
+      Own the design system. Expose components to siblings in {department}.
+    skill_hint: stitch-skill
+    verdict_format: "FE_DSYS: <DONE|BLOCKED> — <component count>"
+    parallel_with: [fe_page_builder]
+    veto_power: false
+    can_escalate: false
+
+  docs_author:
+    name: docs_author
+    department: Docs
+    description: "Docs executor: authors user / API / architecture docs."
+    prompt_template: |
+      You are the {role_name} (department {department}) in an org-engine workflow.
+      Task: {task_description}
+
+      {context_block}
+
+      Author the requested documentation. Follow the registered contract(s).
+    skill_hint: elements-of-style:writing-clearly-and-concisely
+    verdict_format: "DOCS: <DONE|BLOCKED> — <what was authored>"
+    parallel_with: []
+    veto_power: false
+    can_escalate: false
+
+  # ----- managers (recursive node shape, multi-skill pipeline) -----
+  # Each manager is the kernel's recursive point pairing: a manager node
+  # runs a 4-stage pipeline (decompose → dispatch → collect → review).
+  # These role defs supply the prompts + skill_hint per stage. The kernel
+  # (organization_orchestrator.py) orchestrates the actual recursion and
+  # the cross-department meeting; managers do not talk to peers directly.
+
+  manager_decompose:
+    name: manager_decompose
+    department: Arch
+    description: "Manager stage 1: split the upstream task pack into executor subtasks + bound skills."
+    prompt_template: |
+      You are the {role_name} stage of a department manager.
+      Department managed: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Split this task pack into N executor subtasks. For each: pick a
+      bound skill + agentType, declare input contract keys and output
+      product keys. Keep executor responsibilities non-overlapping.
+      Max 6 executors per department (split deeper or cut scope instead).
+    skill_hint: pathfinder
+    verdict_format: "DECOMPOSE: <plan with executor list>"
+    parallel_with: []
+    veto_power: false
+    can_escalate: true
+
+  manager_dispatch:
+    name: manager_dispatch
+    department: Arch
+    description: "Manager stage 2: hand the executor list to the kernel (the real recursion point) for expansion."
+    prompt_template: |
+      You are the {role_name} stage of a department manager.
+      Department managed: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Hand the executor list to the kernel. Do NOT execute yourself.
+      The kernel expands the recursion; you only supervise resource/budget.
+    skill_hint: dispatching-parallel-agents
+    verdict_format: "DISPATCH: <ack with executor count>"
+    parallel_with: []
+    veto_power: false
+    can_escalate: true
+
+  manager_collect:
+    name: manager_collect
+    department: Arch
+    description: "Manager stage 3: gather department products into a unified department package."
+    prompt_template: |
+      You are the {role_name} stage of a department manager.
+      Department managed: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Collect your department executors' products. Produce the unified
+      department package. Hand it to the kernel for the cross-department
+      meeting.
+    skill_hint: summarize
+    verdict_format: "COLLECT: <department package summary>"
+    parallel_with: []
+    veto_power: false
+    can_escalate: true
+
+  manager_review:
+    name: manager_review
+    department: Arch
+    description: "Manager stage 4: self-check against contract + scope, decide done / send-back."
+    prompt_template: |
+      You are the {role_name} stage of a department manager.
+      Department managed: {department}
+      Task: {task_description}
+
+      {context_block}
+
+      Self-check: does the department package satisfy the contract and
+      scope? Decide DONE or SEND-BACK. If SEND-BACK you MUST attach a
+      triple {problem, expectation, constraint} — empty send-back is
+      rejected by the kernel.
+    skill_hint: requesting-code-review
+    verdict_format: "REVIEW: <DONE|SEND-BACK> — <triple if send-back>"
+    parallel_with: []
+    veto_power: false
+    can_escalate: true
+
+composition_rules:
+  # Which departments get spun up for a project. A project picks a
+  # required core set + optional specialized departments.
+  departments:
+    required_core: [Arch, FE, BE, QA, Docs]
+    optional: [Sec, Data, Design]
+  # Default executor set per department (used by manager_decompose as a hint).
+  default_executor_sets:
+    Arch: [architect]
+    FE: [fe_page_builder, fe_ui_system]
+    BE: [implementer]
+    QA: [reviewer, tester]
+    Docs: [docs_author]
+    Sec: [security_auditor]
+    Data: [implementer]
+    Design: [designer]
+  mode_minimums:
+    role_collab: 3
+    task_parallel: 2
+    hybrid: 4
+  # Hard caps (also enforced in the kernel; mirrored here for visibility).
+  hard_caps:
+    max_depth: 3
+    max_cycles_per_layer: 3
+    max_executors_per_department: 6
