@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowConfig",
+  "type": "object",
+  "required": ["version", "name", "nodes"],
+  "properties": {
+    "version": { "const": "2.0" },
+    "name": { "type": "string", "pattern": "^[\\p{L}\\p{N}_-]{1,64}$" },
+    "triggers": { "type": "array", "items": { "type": "string" }, "default": ["manual"] },
+    "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["agent", "skill", "decision", "parallel", "channel", "meeting"] },
+        "role_ref": { "type": "string" },
+        "override": { "type": "object" },
+        "skill": { "type": "object", "properties": { "skillId": { "type": "string" }, "params": { "type": "object" }, "timeout": { "type": "integer" } } },
+        "decision": { "type": "object", "properties": { "condition": { "type": "string" }, "branches": { "type": "object" } } },
+        "parallel": { "type": "object", "properties": { "branches": { "type": "array", "items": { "type": "string" } }, "mergeStrategy": { "enum": ["all", "any", "sequence"] } } },
+        "channel": { "type": "object", "required": ["key"], "properties": { "key": { "type": "string" }, "acl": { "type": "object", "properties": { "read": { "type": "array", "items": { "type": "string" } }, "write": { "type": "array", "items": { "type": "string" } } } } } },
+        "meeting": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["dept_internal", "ministerial", "decision"] },
+            "participants": {
+              "type": "object",
+              "properties": {
+                "from": { "enum": ["department", "managers", "exec_roles", "explicit"] },
+                "department": { "type": "string" },
+                "roles": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "channel": { "type": "string" },
+            "agenda": { "type": "string" },
+            "output": { "type": "object", "properties": { "write_to": { "type": "array", "items": { "enum": ["channel", "flow"] } } } }
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["id", "source", "target", "kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "source": { "type": "string" },
+        "target": { "type": "string" },
+        "kind": { "enum": ["flow", "message"] }
+      }
+    }
+  }
+}

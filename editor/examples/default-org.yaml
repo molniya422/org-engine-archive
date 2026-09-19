@@ -1,0 +1,99 @@
+version: "2.0"
+org:
+  name: default-org
+  description: "Default organization configuration for org-engine"
+  departments:
+    - name: Arch
+      description: "Cross-cutting technical decisions, contract first-drafting, risk"
+      required: true
+      roles:
+        - id: arch.architect
+          name: architect
+          agentType: general-purpose
+          bound_skills: [design-patterns]
+          permissions:
+            can_veto: true
+            can_escalate: true
+        - id: arch.integrator
+          name: integrator
+          agentType: general-purpose
+          bound_skills: [pathfinder]
+          permissions:
+            can_escalate: true
+
+    - name: FE
+      description: "UI / Client implementation"
+      required: true
+      roles:
+        - id: fe.fe_page_builder
+          name: fe_page_builder
+          agentType: general-purpose
+          bound_skills: [taste-skill]
+        - id: fe.fe_ui_system
+          name: fe_ui_system
+          agentType: general-purpose
+          bound_skills: [stitch-skill]
+
+    - name: BE
+      description: "Services / data / business logic"
+      required: true
+      roles:
+        - id: be.implementer
+          name: implementer
+          agentType: general-purpose
+          bound_skills: [test-driven-development]
+
+    - name: QA
+      description: "Cross-department quality gate, acceptance criteria"
+      required: true
+      roles:
+        - id: qa.reviewer
+          name: reviewer
+          agentType: general-purpose
+          bound_skills: [pr-review]
+          permissions:
+            can_veto: true
+            can_escalate: true
+        - id: qa.tester
+          name: tester
+          agentType: general-purpose
+          bound_skills: [verification-before-completion]
+          permissions:
+            can_escalate: true
+
+    - name: Docs
+      description: "User / API / architecture doc authoring"
+      required: true
+      roles:
+        - id: docs.docs_author
+          name: docs_author
+          agentType: general-purpose
+          bound_skills: [elements-of-style:writing-clearly-and-concisely]
+
+    - name: Sec
+      description: "Security review, permission model, dependency audit"
+      required: false
+      roles:
+        - id: sec.security_auditor
+          name: security_auditor
+          agentType: general-purpose
+          bound_skills: [security-guardian]
+          permissions:
+            can_veto: true
+            can_escalate: true
+
+    - name: Design
+      description: "Design systems, visual consistency"
+      required: false
+      roles:
+        - id: design.designer
+          name: designer
+          agentType: general-purpose
+          bound_skills: [design-is]
+
+budget:
+  max_depth: 3
+  max_cycles_per_layer: 3
+  max_executors_per_department: 6
+  max_parallel_agents: 8
+  gateway_timeout_minutes: 60

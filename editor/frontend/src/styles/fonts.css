@@ -1,0 +1,5 @@
+/* Geist Display + Geist + Geist Mono via @fontsource (self-hosted, swap, no Google Fonts).
+ * Install: npm i @fontsource-variable/geist @fontsource-variable/geist-mono
+ */
+@import "@fontsource-variable/geist/index.css";
+@import "@fontsource-variable/geist-mono/index.css";

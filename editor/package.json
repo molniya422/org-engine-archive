@@ -1,0 +1,40 @@
+{
+  "name": "org-engine-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Org Engine Editor - Configure and manage multi-agent organizational hierarchies",
+  "author": "Org Engine Team",
+  "main": "electron/dist/main.js",
+  "bin": {
+    "org-engine-editor": "./apps/cli.mjs"
+  },
+  "workspaces": [
+    "backend-server",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend-server && npx tsx src/server.ts",
+    "frontend": "cd frontend && npx vite",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend-server && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "build:harness": "pyinstaller scripts/build-harness.spec",
+    "build:backend": "esbuild backend-server/src/server.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/server.cjs",
+    "build:frontend": "cd frontend && cross-env NODE_ENV=production npx vite build",
+    "build:electron": "cd electron && npx tsc -p tsconfig.json",
+    "build:mcp": "esbuild backend-server/src/mcp/mcp-stdio.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/mcp-stdio.cjs --external:@modelcontextprotocol/sdk --external:./node_modules/*",
+    "build": "npm run build:backend && npm run build:mcp && npm run build:frontend && npm run build:electron",
+    "package:win": "npm run build && npx electron-builder build --win"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.0",
+    "electron": "33.4.11",
+    "electron-builder": "^25.0.0",
+    "esbuild": "^0.24.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
+}

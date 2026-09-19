@@ -1,0 +1,14 @@
+version: "2.0"
+org:
+  name: ""
+  departments:
+    - name: Arch
+      roles:
+        - id: arch.tech_lead
+          name: tech_lead
+          agentType: general-purpose
+          bound_skills: [pathfinder]
+budget:
+  max_depth: 3
+  max_cycles_per_layer: 3
+  max_executors_per_department: 6

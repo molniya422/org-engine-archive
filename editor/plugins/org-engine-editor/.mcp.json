@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "org-engine-editor": {
+      "type": "stdio",
+      "command": "org-engine-editor",
+      "args": ["mcp", "--daemon-url", "http://127.0.0.1:5172"]
+    }
+  }
+}
