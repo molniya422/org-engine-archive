@@ -61,3 +61,29 @@ export function applyProposal(
   proposal.applied_commit = git(['rev-parse', '--short', 'HEAD'], orgsDir).trim();
   return proposal;
 }
+
+export type ProposalStatus = 'proposed' | 'applied' | 'rejected' | 'reverted';
+
+/** 提案状态机 — 唯一转移定义。非法转移抛错。 */
+export function nextStatus(current: string, action: 'approve' | 'reject' | 'revert'): ProposalStatus {
+  if (action === 'approve' && current === 'proposed') return 'applied';
+  if (action === 'reject' && current === 'proposed') return 'rejected';
+  if (action === 'revert' && current === 'applied') return 'reverted';
+  throw new Error(`invalid transition: ${current} -> ${action}`);
+}
+
+/** 回滚已应用的提案:git revert applied_commit(仅允许 HEAD 上的 commit)。 */
+export function revertProposal(
+  store: OrgConfigStore, orgsDir: string, proposal: Proposal,
+): Proposal {
+  nextStatus(proposal.status, 'revert');       // 非法转移在此抛错
+  const commit = proposal.applied_commit;
+  if (!commit) throw new Error('missing applied_commit');
+  const head = git(['rev-parse', '--short', 'HEAD'], orgsDir).trim();
+  if (head !== commit) throw new Error(`applied_commit ${commit} is not HEAD (${head}); only latest can be reverted`);
+  git(['-c', 'user.name=org-engine', '-c', 'user.email=learning@org-engine',
+       'revert', '--no-edit', commit], orgsDir);
+  proposal.status = nextStatus(proposal.status, 'revert');
+  proposal.reverted_commit = git(['rev-parse', '--short', 'HEAD'], orgsDir).trim();
+  return proposal;
+}
