@@ -5,6 +5,7 @@ import re
 EVENT_KINDS = {
     "skill_miss", "skill_fp", "dispatch_miss", "dispatch_fp",
     "contract_violation", "budget_warn", "tool_positive", "tool_negative",
+    "proposal_applied", "proposal_reverted",
 }
 _TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
 
