@@ -1,8 +1,8 @@
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile, appendFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { OrgConfigStore } from '../org-config/store';
-import { applyProposal } from './apply';
+import { applyProposal, nextStatus, revertProposal } from './apply';
 
 export interface LearningOpts { learningDir: string; orgsDir: string }
 
@@ -16,6 +16,12 @@ async function readJsonl(path: string): Promise<unknown[]> {
   }
   return out;
 }
+
+async function appendEvent(path: string, ev: Record<string, unknown>): Promise<void> {
+  await appendFile(path, JSON.stringify(ev) + '\n', 'utf-8');
+}
+
+function nowIso(): string { return new Date().toISOString(); }
 
 export async function learningRoutes(app: any, opts: LearningOpts) {
   const store = new OrgConfigStore();
@@ -40,7 +46,8 @@ export async function learningRoutes(app: any, opts: LearningOpts) {
     const p = join(proposalsDir, `${req.params.id}.json`);
     if (!existsSync(p)) return reply.code(404).send({ error: 'proposal not found' });
     const proposal = JSON.parse(await readFile(p, 'utf-8'));
-    proposal.status = 'rejected';
+    try { nextStatus(proposal.status, 'reject'); } catch (e: any) { return reply.code(409).send({ error: e.message }); }
+    proposal.status = nextStatus(proposal.status, 'reject');
     await writeFile(p, JSON.stringify(proposal, null, 2), 'utf-8');
     return proposal;
   });
@@ -49,12 +56,30 @@ export async function learningRoutes(app: any, opts: LearningOpts) {
     const p = join(proposalsDir, `${req.params.id}.json`);
     if (!existsSync(p)) return reply.code(404).send({ error: 'proposal not found' });
     const proposal = JSON.parse(await readFile(p, 'utf-8'));
-    // fail-closed:非 proposed 状态一律拒绝,避免重复应用
-    if (proposal.status !== 'proposed') {
-      return reply.code(409).send({ error: `status is ${proposal.status}` });
-    }
+    try { nextStatus(proposal.status, 'approve'); } catch (e: any) { return reply.code(409).send({ error: e.message }); }
     const applied = applyProposal(store, opts.orgsDir, proposal);
     await writeFile(p, JSON.stringify(applied, null, 2), 'utf-8');
+    await appendEvent(eventsPath, {
+      ts: nowIso(), run_id: 'approve', kind: 'proposal_applied',
+      payload: { proposal_id: proposal.id, org_ref: proposal.org_ref, rule: proposal.rule },
+    });
     return applied;
+  });
+
+  app.post('/api/learning/proposals/:id/revert', async (req: any, reply: any) => {
+    const p = join(proposalsDir, `${req.params.id}.json`);
+    if (!existsSync(p)) return reply.code(404).send({ error: 'proposal not found' });
+    const proposal = JSON.parse(await readFile(p, 'utf-8'));
+    try {
+      const reverted = revertProposal(store, opts.orgsDir, proposal);
+      await writeFile(p, JSON.stringify(reverted, null, 2), 'utf-8');
+      await appendEvent(eventsPath, {
+        ts: nowIso(), run_id: 'revert', kind: 'proposal_reverted',
+        payload: { proposal_id: proposal.id, org_ref: proposal.org_ref, rule: proposal.rule },
+      });
+      return reverted;
+    } catch (e: any) {
+      return reply.code(409).send({ error: e.message });
+    }
   });
 }

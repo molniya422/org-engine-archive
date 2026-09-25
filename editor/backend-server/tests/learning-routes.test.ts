@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Fastify from 'fastify';
@@ -46,8 +47,12 @@ beforeAll(() => {
     id: 'prop-done', org_ref: 't', rule: 'x', evidence: [], rationale: 'r', status: 'applied', changes: [],
   }));
 
-  // 目标 org
+  // 目标 org + git 基线(apply 在其上提交,revert 才能安全撤销)
   new OrgConfigStore().save('t', ORG);
+  const orgsDir = join(home, 'orgs');
+  execFileSync('git', ['init'], { cwd: orgsDir });
+  execFileSync('git', ['add', '.'], { cwd: orgsDir });
+  execFileSync('git', ['-c', 'user.name=org-engine', '-c', 'user.email=learning@org-engine', 'commit', '-m', 'baseline'], { cwd: orgsDir });
 });
 
 afterAll(() => {
@@ -129,6 +134,35 @@ describe('learning routes', () => {
     // org yaml 真的出现了新角色
     const org: any = new OrgConfigStore().get('t');
     expect(org.org.departments[0].roles.map((r: any) => r.id)).toContain('qa.r2');
+    await app.close();
+  });
+});
+describe('learning revert + audit', () => {
+  it('POST revert reverts an applied proposal', async () => {
+    const app = build();
+    writeFileSync(join(learningDir, 'proposals', 'prop-rev.json'), JSON.stringify({
+      id: 'prop-rev', org_ref: 't', rule: 'x', status: 'proposed', evidence: [], rationale: 'r',
+      changes: [{ op: 'add_role', dept: 'QA', role: { id: 'qa.z', name: 'z', agentType: 'g', bound_skills: ['pr-review'] } }],
+    }));
+    const ap = await app.inject({ method: 'POST', url: '/api/learning/proposals/prop-rev/approve' });
+    expect(JSON.parse(ap.payload).status).toBe('applied');
+    const rv = await app.inject({ method: 'POST', url: '/api/learning/proposals/prop-rev/revert' });
+    expect(rv.statusCode).toBe(200);
+    const body = JSON.parse(rv.payload);
+    expect(body.status).toBe('reverted');
+    expect(body.reverted_commit).toMatch(/^[0-9a-f]{7,}$/);
+    const org: any = new OrgConfigStore().get('t');
+    expect(org.org.departments[0].roles.map((r: any) => r.id)).not.toContain('qa.z');
+    await app.close();
+  });
+
+  it('POST revert on proposed → 409 (fail-closed)', async () => {
+    const app = build();
+    writeFileSync(join(learningDir, 'proposals', 'prop-nv.json'), JSON.stringify({
+      id: 'prop-nv', org_ref: 't', rule: 'x', status: 'proposed', changes: [], evidence: [], rationale: 'r',
+    }));
+    const res = await app.inject({ method: 'POST', url: '/api/learning/proposals/prop-nv/revert' });
+    expect(res.statusCode).toBe(409);
     await app.close();
   });
 });
