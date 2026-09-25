@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { OrgConfigStore } from '../org-config/store';
 import { applyProposal, nextStatus, revertProposal } from './apply';
+import { AutoApplyPolicy, canAutoApply } from './autonomy';
 
 export interface LearningOpts { learningDir: string; orgsDir: string }
 
@@ -81,5 +82,30 @@ export async function learningRoutes(app: any, opts: LearningOpts) {
     } catch (e: any) {
       return reply.code(409).send({ error: e.message });
     }
+  });
+
+  app.post('/api/learning/proposals/auto-apply', async (_req: any, reply: any) => {
+    if (!existsSync(proposalsDir)) return { applied: 0, skipped: 0 };
+    const files = (await readdir(proposalsDir)).filter(f => f.endsWith('.json'));
+    const policy = new AutoApplyPolicy(opts.learningDir);
+    let applied = 0, skipped = 0;
+    for (const f of files) {
+      const p = join(proposalsDir, f);
+      const proposal = JSON.parse(await readFile(p, 'utf-8'));
+      if (proposal.status !== 'proposed') continue;
+      const org: any = store.get(proposal.org_ref);
+      const level = org?.learning?.autonomy ?? 'l1';
+      if (!canAutoApply(proposal, level) || !policy.allow()) { skipped++; continue; }
+      policy.record();
+      const done = applyProposal(store, opts.orgsDir, proposal);
+      done.auto_applied = true;
+      await writeFile(p, JSON.stringify(done, null, 2), 'utf-8');
+      await appendEvent(eventsPath, {
+        ts: nowIso(), run_id: 'auto-apply', kind: 'proposal_applied',
+        payload: { proposal_id: proposal.id, org_ref: proposal.org_ref, rule: proposal.rule, auto_applied: true },
+      });
+      applied++;
+    }
+    return { applied, skipped };
   });
 }

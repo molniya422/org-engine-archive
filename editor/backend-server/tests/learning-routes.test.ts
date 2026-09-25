@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import Fastify from 'fastify';
 import { learningRoutes } from '../src/learning/routes';
@@ -163,6 +163,73 @@ describe('learning revert + audit', () => {
     }));
     const res = await app.inject({ method: 'POST', url: '/api/learning/proposals/prop-nv/revert' });
     expect(res.statusCode).toBe(409);
+    await app.close();
+  });
+});
+
+describe('learning auto-apply', () => {
+  beforeEach(() => {
+    const st = join(learningDir, 'autonomy-state.json');
+    if (existsSync(st)) rmSync(st, { force: true });
+  });
+
+  it('POST auto-apply skips low-risk at l1 (human-only)', async () => {
+    const app = build();
+    writeFileSync(join(learningDir, 'proposals', 'prop-low.json'), JSON.stringify({
+      id: 'prop-low', org_ref: 't', rule: 'skill_rebind', status: 'proposed',
+      changes: [{ op: 'rebind_skill', skill: 'dpa', target: 'redesign-skill' }],
+      evidence: [{}, {}, {}], rationale: 'r',
+    }));
+    const res = await app.inject({ method: 'POST', url: '/api/learning/proposals/auto-apply' });
+    expect(JSON.parse(res.payload).applied).toBe(0);
+    const list = JSON.parse((await app.inject({ method: 'GET', url: '/api/learning/proposals' })).payload);
+    expect(list.find((p: any) => p.id === 'prop-low').status).toBe('proposed');
+    await app.close();
+  });
+
+  it('POST auto-apply applies low-risk at l3 and records audit event', async () => {
+    const app = build();
+    const store = new OrgConfigStore();
+    store.save('t3', {
+      version: '2.0',
+      org: { name: 't3', departments: [{ name: 'FE', roles: [{ id: 'fe.b', name: 'b', agentType: 'g', bound_skills: ['dpa'] }] }], contracts: [] },
+      budget: {},
+      learning: { autonomy: 'l3' },
+    });
+    writeFileSync(join(learningDir, 'proposals', 'prop-l3.json'), JSON.stringify({
+      id: 'prop-l3', org_ref: 't3', rule: 'skill_rebind', status: 'proposed',
+      changes: [{ op: 'rebind_skill', skill: 'dpa', target: 'redesign-skill' }],
+      evidence: [{}, {}, {}], rationale: 'r',
+    }));
+    const res = await app.inject({ method: 'POST', url: '/api/learning/proposals/auto-apply' });
+    expect(JSON.parse(res.payload).applied).toBe(1);
+    const saved: any = store.get('t3');
+    expect(saved.org.departments[0].roles[0].bound_skills).toEqual(['redesign-skill']);
+    const evs = JSON.parse((await app.inject({ method: 'GET', url: '/api/learning/events' })).payload);
+    expect(evs.some((e: any) => e.kind === 'proposal_applied')).toBe(true);
+    await app.close();
+  });
+
+  it('POST auto-apply respects the breaker once exhausted', async () => {
+    const app = build();
+    const store = new OrgConfigStore();
+    store.save('t4', {
+      version: '2.0',
+      org: { name: 't4', departments: [{ name: 'FE', roles: [{ id: 'fe.c', name: 'c', agentType: 'g', bound_skills: ['dpa'] }] }], contracts: [] },
+      budget: {},
+      learning: { autonomy: 'l3' },
+    });
+    for (let i = 0; i < 4; i++) {
+      writeFileSync(join(learningDir, 'proposals', `prop-b${i}.json`), JSON.stringify({
+        id: `prop-b${i}`, org_ref: 't4', rule: 'skill_rebind', status: 'proposed',
+        changes: [{ op: 'rebind_skill', skill: 'dpa', target: 'redesign-skill' }],
+        evidence: [{}, {}, {}], rationale: 'r',
+      }));
+    }
+    const res = await app.inject({ method: 'POST', url: '/api/learning/proposals/auto-apply' });
+    expect(JSON.parse(res.payload).applied).toBe(3);   // 窗口额度 3 打满
+    const list = JSON.parse((await app.inject({ method: 'GET', url: '/api/learning/proposals' })).payload);
+    expect(list.find((p: any) => p.id === 'prop-b3').status).toBe('proposed');   // 第 4 个被熔断跳过
     await app.close();
   });
 });
