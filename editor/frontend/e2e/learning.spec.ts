@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { E2E_HOME, E2E_LEARNING, E2E_ORGS } from './learning-env';
@@ -46,6 +47,11 @@ test.beforeAll(() => {
   mkdirSync(E2E_ORGS, { recursive: true });
   mkdirSync(join(E2E_LEARNING, 'proposals'), { recursive: true });
   writeFileSync(join(E2E_ORGS, `${ORG_ID}.yaml`), ORG_YAML);
+  // 组织仓库基线:先 commit 一次,revert 才能撤销 apply 那层而非删掉整个文件
+  // (apply 的 commit 不能是 root commit,否则 git revert 会失败)
+  execFileSync('git', ['init'], { cwd: E2E_ORGS, stdio: 'ignore' });
+  execFileSync('git', ['add', '.'], { cwd: E2E_ORGS, stdio: 'ignore' });
+  execFileSync('git', ['-c', 'user.name=org-engine', '-c', 'user.email=learning@org-engine', 'commit', '-m', 'baseline'], { cwd: E2E_ORGS, stdio: 'ignore' });
   writeFileSync(join(E2E_LEARNING, 'events.jsonl'),
     JSON.stringify({ ts: '2026-09-11T00:00:00+00:00', run_id: 'r', kind: 'dispatch_miss', payload: {} }) + '\n');
   writeFileSync(join(E2E_LEARNING, 'proposals', `${PROPOSAL.id}.json`), JSON.stringify(PROPOSAL, null, 2));
@@ -82,4 +88,12 @@ test('approve proposal mutates org yaml and records a commit', async ({ page }) 
   // org yaml 真的写入了新角色
   const org = readFileSync(join(E2E_ORGS, `${ORG_ID}.yaml`), 'utf-8');
   expect(org).toContain('qa.r');
+
+  // ---- 回滚 ----
+  await page.getByText('回滚').click();
+  await expect(page.getByText(/已回滚/)).toBeVisible({ timeout: 10_000 });
+  const reverted = readFileSync(join(E2E_LEARNING, 'proposals', `${PROPOSAL.id}.json`), 'utf-8');
+  expect(JSON.parse(reverted).status).toBe('reverted');
+  const orgAfter = readFileSync(join(E2E_ORGS, `${ORG_ID}.yaml`), 'utf-8');
+  expect(orgAfter).not.toContain('qa.r');
 });
