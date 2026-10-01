@@ -177,4 +177,8 @@ export const api = {
     request<any>(`/api/learning/proposals/${id}/approve`, { method: 'POST' }),
   rejectProposal: (id: string) =>
     request<any>(`/api/learning/proposals/${id}/reject`, { method: 'POST' }),
+  revertProposal: (id: string) =>
+    request<any>(`/api/learning/proposals/${id}/revert`, { method: 'POST' }),
+  autoApplyProposals: () =>
+    request<any>('/api/learning/proposals/auto-apply', { method: 'POST' }),
 };

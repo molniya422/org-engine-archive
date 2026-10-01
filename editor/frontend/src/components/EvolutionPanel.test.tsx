@@ -30,6 +30,10 @@ function mockFetch(overrides: { events?: unknown[]; proposals?: unknown[] } = {}
       proposals = proposals.map((p: any) => ({ ...p, status: 'rejected' }));
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...PROPOSAL, status: 'rejected' }) });
     }
+    if (u.includes('/revert')) {
+      proposals = proposals.map((p: any) => ({ ...p, status: 'reverted', reverted_commit: 'def5678' }));
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...proposals[0], status: 'reverted', reverted_commit: 'def5678' }) });
+    }
     return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
   });
 }
@@ -69,5 +73,14 @@ describe('EvolutionPanel', () => {
     global.fetch = mockFetch({ proposals: [] }) as any;
     render(<EvolutionPanel />);
     await waitFor(() => expect(screen.getByText('暂无提案')).toBeTruthy());
+  });
+
+  it('revert flips an applied proposal to reverted', async () => {
+    render(<EvolutionPanel />);
+    await waitFor(() => screen.getByText('批准'));
+    fireEvent.click(screen.getByText('批准'));
+    await waitFor(() => screen.getByText(/已应用 commit abc1234/));
+    fireEvent.click(screen.getByText('回滚'));
+    await waitFor(() => expect(screen.getByText(/已回滚/)).toBeTruthy());
   });
 });

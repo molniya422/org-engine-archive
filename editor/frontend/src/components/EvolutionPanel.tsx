@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, CheckCircle, Undo2, RefreshCw } from 'lucide-react';
 
 interface LearningEvent {
   ts: string;
@@ -21,6 +21,7 @@ interface Proposal {
   status: string;
   evidence: unknown[];
   applied_commit?: string;
+  reverted_commit?: string;
 }
 
 export function EvolutionPanel() {
@@ -45,11 +46,12 @@ export function EvolutionPanel() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const act = async (id: string, action: 'approve' | 'reject') => {
+  const act = async (id: string, action: 'approve' | 'reject' | 'revert') => {
     setBusy(id);
     try {
       if (action === 'approve') await api.approveProposal(id);
-      else await api.rejectProposal(id);
+      else if (action === 'reject') await api.rejectProposal(id);
+      else await api.revertProposal(id);
       await refresh();
     } catch (err: any) {
       setError(err?.message ?? `${action} 失败`);
@@ -105,8 +107,18 @@ export function EvolutionPanel() {
                 </div>
               )}
               {p.status === 'applied' && (
-                <span className="flex items-center gap-1 font-mono text-[10.5px] text-emerald-400 mt-2">
-                  <CheckCircle size={11} /> 已应用 commit {p.applied_commit}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="flex items-center gap-1 font-mono text-[10.5px] text-emerald-400">
+                    <CheckCircle size={11} /> 已应用 commit {p.applied_commit}
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => act(p.id, 'revert')} disabled={busy === p.id}>
+                    <Undo2 size={11} /> 回滚
+                  </Button>
+                </div>
+              )}
+              {p.status === 'reverted' && (
+                <span className="flex items-center gap-1 font-mono text-[10.5px] text-muted-foreground mt-2">
+                  <Undo2 size={11} /> 已回滚 commit {p.reverted_commit}
                 </span>
               )}
             </div>
