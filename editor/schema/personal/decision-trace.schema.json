@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/decision-trace.schema.json",
+  "title": "DecisionTrace",
+  "description": "Replayable record of one decision: candidates, selection, rejections, and the exact policy/rule/evidence versions involved.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "task_id", "input_refs", "candidate_actions", "selected_action", "rejected_reasons", "policy_version", "rule_refs", "evidence_refs", "uncertainty", "requires_confirmation", "created_at", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^decision_[A-Za-z0-9_-]+$" },
+    "task_id": { "type": "string", "pattern": "^task_[A-Za-z0-9_-]+$" },
+    "input_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "candidate_actions": { "type": "array", "items": { "type": "string", "pattern": "^action_[A-Za-z0-9_-]+$" } },
+    "selected_action": { "type": ["string", "null"], "pattern": "^action_[A-Za-z0-9_-]+$" },
+    "rejected_reasons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action_id", "reason"],
+        "properties": {
+          "action_id": { "type": "string", "pattern": "^action_[A-Za-z0-9_-]+$" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "policy_version": { "type": "string", "minLength": 1 },
+    "rule_refs": { "type": "array", "items": { "type": "string", "pattern": "^rule_[A-Za-z0-9_-]+$" } },
+    "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^evidence_[A-Za-z0-9_-]+$" } },
+    "uncertainty": { "type": "number", "minimum": 0, "maximum": 1 },
+    "requires_confirmation": { "type": "boolean" },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "selected_action": { "type": "string" } } },
+      "then": { "properties": { "candidate_actions": { "type": "array", "minItems": 1 } } }
+    }
+  ],
+  "x-validation-note": "selected_action must appear in candidate_actions (when non-null). JSON Schema cannot express array membership across properties; the personal store and API enforce this before persisting. The invalid fixture pins this contract."
+}

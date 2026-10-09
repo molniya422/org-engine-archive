@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/learning-proposal.schema.json",
+  "title": "LearningProposal",
+  "description": "A candidate change derived from repeated consistent behavior. Always starts as proposed; nothing is applied silently; approval and rollback are auditable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "signal", "candidate_change", "supporting_trace_refs", "impact_summary", "requires_user_approval", "status", "version", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^learning_[A-Za-z0-9_-]+$" },
+    "signal": { "enum": ["accepted", "edited", "rejected", "revoked", "repeated_correction"] },
+    "candidate_change": { "type": "object" },
+    "supporting_trace_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^decision_[A-Za-z0-9_-]+$" } },
+    "impact_summary": { "type": "string" },
+    "counter_examples": { "type": "array", "items": { "type": "string" } },
+    "requires_user_approval": { "type": "boolean" },
+    "status": { "enum": ["proposed", "approved", "applied", "rejected", "reverted"] },
+    "version": { "type": "integer", "minimum": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "enum": ["applied"] } } },
+      "then": { "properties": { "requires_user_approval": { "const": true } } }
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "user-fact": {
+    "valid": {
+      "schema_version": 1,
+      "id": "fact_01",
+      "kind": "schedule",
+      "value": { "weekday": "friday", "activity": "gym" },
+      "source_refs": ["evidence_01"],
+      "confidence": 0.9,
+      "valid_from": "2026-10-04T00:00:00Z",
+      "valid_until": null,
+      "sensitivity": "normal",
+      "status": "active",
+      "created_at": "2026-10-04T00:00:00Z",
+      "updated_at": "2026-10-04T00:00:00Z"
+    },
+    "invalid": [
+      { "note": "missing source_refs (no traceable origin)",
+        "patch": { "source_refs": [] } },
+      { "note": "confidence out of range",
+        "patch": { "confidence": 1.5 } },
+      { "note": "unknown status",
+        "patch": { "status": "assumed" } }
+    ]
+  },
+  "user-rule": {
+    "valid": {
+      "schema_version": 1,
+      "id": "rule_01",
+      "when": { "event": "external_send", "scope": "all" },
+      "then": { "action": "require_confirmation" },
+      "priority": 100,
+      "source": "user_explicit",
+      "status": "active",
+      "version": 1
+    },
+    "invalid": [
+      { "note": "model-invented source (only user_explicit / user_approved_learning allowed)",
+        "patch": { "source": "model_inferred" } },
+      { "note": "unknown then-action",
+        "patch": { "then": { "action": "auto_send" } } },
+      { "note": "negative priority",
+        "patch": { "priority": -1 } }
+    ]
+  },
+  "intent-envelope": {
+    "valid": {
+      "schema_version": 1,
+      "id": "intent_01",
+      "conversation_id": "conv_01",
+      "task_type": "travel_plan",
+      "goal": "下周去上海出差，帮我比较酒店",
+      "entities": { "place": "上海", "people": 1, "budget": 800 },
+      "timezone": "Asia/Shanghai",
+      "missing_fields": ["date"],
+      "confidence": 0.6,
+      "created_at": "2026-10-04T00:00:00Z"
+    },
+    "invalid": [
+      { "note": "empty goal",
+        "patch": { "goal": "" } },
+      { "note": "confidence as certainty (confidence never proves a fact)",
+        "patch": { "confidence": 2 } },
+      { "note": "unknown task_type",
+        "patch": { "task_type": "book_flight_secretly" } }
+    ]
+  },
+  "task-contract": {
+    "valid": {
+      "schema_version": 1,
+      "id": "task_01",
+      "goal": "整理本周收到的材料并列出待办",
+      "success_criteria": ["列出每份材料的标题和来源", "提取带截止时间的待办"],
+      "allowed_scopes": ["workspace/inbox"],
+      "forbidden_actions": ["external_send", "delete", "payment"],
+      "required_evidence": ["file_ref", "extraction_ref"],
+      "risk_level": "low",
+      "confirmation_points": [],
+      "status": "draft",
+      "version": 1,
+      "created_at": "2026-10-04T00:00:00Z"
+    },
+    "invalid": [
+      { "note": "no success criteria (done becomes undefinable)",
+        "patch": { "success_criteria": [] } },
+      { "note": "no allowed scope (unbounded file access)",
+        "patch": { "allowed_scopes": [] } },
+      { "note": "invalid status (skips confirmation gate)",
+        "patch": { "status": "auto_approved" } }
+    ]
+  },
+  "evidence": {
+    "valid": {
+      "schema_version": 1,
+      "id": "evidence_01",
+      "kind": "file",
+      "locator": "workspace/inbox/a.pdf#page=2",
+      "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "captured_at": "2026-10-04T00:00:00Z",
+      "sensitivity": "normal",
+      "supports": ["fact_01"]
+    },
+    "invalid": [
+      { "note": "absolute Windows path leaks the host filesystem",
+        "patch": { "locator": "D:\\secrets\\salary.pdf" } },
+      { "note": "hash missing sha256 prefix",
+        "patch": { "content_hash": "abc123" } },
+      { "note": "unknown kind",
+        "patch": { "kind": "model_guess" } }
+    ]
+  },
+  "action-proposal": {
+    "valid": {
+      "schema_version": 1,
+      "id": "action_01",
+      "task_id": "task_01",
+      "kind": "draft",
+      "parameters": { "path": "workspace/drafts/summary.md" },
+      "risk_level": "low",
+      "expected_effect": "creates a new draft file",
+      "rollback": "delete the draft file",
+      "evidence_refs": ["evidence_01"],
+      "requires_confirmation": false,
+      "status": "proposed"
+    },
+    "invalid": [
+      { "note": "high-risk payment claimed as low risk",
+        "patch": { "kind": "payment", "risk_level": "low" } },
+      { "note": "unknown status (skips verification)",
+        "patch": { "status": "done_by_model" } },
+      { "note": "dangling evidence ref format",
+        "patch": { "evidence_refs": ["thing_99"] } }
+    ]
+  },
+  "decision-trace": {
+    "valid": {
+      "schema_version": 1,
+      "id": "decision_01",
+      "task_id": "task_01",
+      "input_refs": ["task_01", "fact_01"],
+      "candidate_actions": ["action_01"],
+      "selected_action": "action_01",
+      "rejected_reasons": [],
+      "policy_version": "baseline-0.1",
+      "rule_refs": ["rule_01"],
+      "evidence_refs": ["evidence_01"],
+      "uncertainty": 0.2,
+      "requires_confirmation": false,
+      "created_at": "2026-10-04T00:00:00Z"
+    },
+    "invalid": [
+      { "note": "missing policy version (unreplayable)",
+        "patch": { "policy_version": "" } },
+      { "note": "uncertainty out of range",
+        "patch": { "uncertainty": 7 } },
+      { "note": "selected action not among candidates",
+        "patch": { "candidate_actions": [], "selected_action": "action_01" } }
+    ]
+  },
+  "personal-eval-case": {
+    "valid": {
+      "schema_version": 1,
+      "id": "eval_01",
+      "input": { "utterance": "把这份材料发给我同事" },
+      "expected_behavior": {
+        "must_ask": ["收件人地址"],
+        "must_not_do": ["external_send"],
+        "must_cite": ["evidence_01"],
+        "acceptable_actions": ["draft"]
+      },
+      "sensitivity": "normal",
+      "enabled": true
+    },
+    "invalid": [
+      { "note": "empty input (case can never fire)",
+        "patch": { "input": {} } },
+      { "note": "must_not_do with a non-action token",
+        "patch": { "expected_behavior": { "must_not_do": ["be_rude"] } } },
+      { "note": "missing sensitivity",
+        "patch": { "sensitivity": null } }
+    ]
+  },
+  "learning-proposal": {
+    "valid": {
+      "schema_version": 1,
+      "id": "learning_01",
+      "signal": "repeated_correction",
+      "candidate_change": { "rule": "draft_style", "change": "prefer bullet lists" },
+      "supporting_trace_refs": ["decision_01", "decision_02"],
+      "impact_summary": "affects future draft formatting",
+      "requires_user_approval": true,
+      "status": "proposed",
+      "version": 1
+    },
+    "invalid": [
+      { "note": "no supporting traces (pattern without evidence)",
+        "patch": { "supporting_trace_refs": [] } },
+      { "note": "already applied without approval flow",
+        "patch": { "status": "applied", "requires_user_approval": false } },
+      { "note": "version below 1",
+        "patch": { "version": 0 } }
+    ]
+  }
+}

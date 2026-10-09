@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/action-proposal.schema.json",
+  "title": "ActionProposal",
+  "description": "One proposed action. High-risk kinds always require confirmation; status must reach executed only after a real tool run, verified only via a verifier.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "task_id", "kind", "parameters", "risk_level", "expected_effect", "rollback", "evidence_refs", "requires_confirmation", "status", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^action_[A-Za-z0-9_-]+$" },
+    "task_id": { "type": "string", "pattern": "^task_[A-Za-z0-9_-]+$" },
+    "kind": { "enum": ["read", "draft", "remind", "external_send", "delete", "submit", "payment"] },
+    "parameters": { "type": "object" },
+    "risk_level": { "enum": ["low", "medium", "high"] },
+    "expected_effect": { "type": "string" },
+    "rollback": { "type": "string" },
+    "evidence_refs": { "type": "array", "items": { "type": "string", "pattern": "^evidence_[A-Za-z0-9_-]+$" } },
+    "requires_confirmation": { "type": "boolean" },
+    "status": { "enum": ["proposed", "approved", "executed", "verified", "rejected", "rolled_back"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "enum": ["external_send", "delete", "submit", "payment"] } } },
+      "then": { "properties": { "requires_confirmation": { "const": true }, "risk_level": { "const": "high" } } }
+    }
+  ]
+}

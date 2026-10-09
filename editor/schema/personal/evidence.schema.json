@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/evidence.schema.json",
+  "title": "Evidence",
+  "description": "A traceable source. kind=user_statement never auto-upgrades; file evidence stores workspace-relative locators only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "locator", "content_hash", "captured_at", "sensitivity", "supports", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^evidence_[A-Za-z0-9_-]+$" },
+    "kind": { "enum": ["file", "tool_result", "user_statement", "execution_receipt", "verification"] },
+    "locator": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^[A-Za-z]:(\\\\|/)" }
+    },
+    "content_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "sensitivity": { "enum": ["normal", "sensitive", "high"] },
+    "supports": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

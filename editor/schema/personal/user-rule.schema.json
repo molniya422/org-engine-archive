@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/user-rule.schema.json",
+  "title": "UserRule",
+  "description": "A hard constraint the user set or approved. Rules bind the RuleEngine; model output can never create or weaken them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "when", "then", "priority", "source", "status", "version", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^rule_[A-Za-z0-9_-]+$" },
+    "when": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": { "enum": ["external_send", "delete", "payment", "submit", "read_file", "create_draft", "create_reminder", "any_action"] },
+        "scope": { "type": "string", "minLength": 1 }
+      }
+    },
+    "then": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": { "enum": ["require_confirmation", "deny", "allow", "redact_and_confirm"] },
+        "message": { "type": "string" }
+      }
+    },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 1000 },
+    "source": { "enum": ["user_explicit", "user_approved_learning"] },
+    "status": { "enum": ["active", "paused", "revoked"] },
+    "version": { "type": "integer", "minimum": 1 }
+  }
+}

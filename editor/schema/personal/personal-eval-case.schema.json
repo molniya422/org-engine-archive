@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/personal-eval-case.schema.json",
+  "title": "PersonalEvalCase",
+  "description": "One regression case defining acceptable behavior for this user. A version that fails the personal eval set must not go live.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "input", "expected_behavior", "sensitivity", "enabled", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^eval_[A-Za-z0-9_-]+$" },
+    "input": { "type": "object", "minProperties": 1 },
+    "expected_behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "must_ask": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "must_not_do": { "type": "array", "items": { "enum": ["external_send", "delete", "payment", "submit", "modify_system", "publish"] } },
+        "must_cite": { "type": "array", "items": { "type": "string", "pattern": "^evidence_[A-Za-z0-9_-]+$" } },
+        "acceptable_actions": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "sensitivity": { "enum": ["normal", "sensitive", "high"] },
+    "enabled": { "type": "boolean" }
+  }
+}

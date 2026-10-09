@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "personal/task-contract.schema.json",
+  "title": "TaskContract",
+  "description": "The transaction contract: what done means, what is allowed, what evidence is required. Status machines never skip awaiting_confirmation for high-risk actions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "goal", "success_criteria", "allowed_scopes", "forbidden_actions", "required_evidence", "risk_level", "confirmation_points", "status", "version", "created_at", "schema_version"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^task_[A-Za-z0-9_-]+$" },
+    "goal": { "type": "string", "minLength": 1 },
+    "success_criteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "allowed_scopes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "forbidden_actions": {
+      "type": "array",
+      "items": { "enum": ["external_send", "delete", "payment", "submit", "modify_system", "publish"] }
+    },
+    "required_evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "risk_level": { "enum": ["low", "medium", "high"] },
+    "confirmation_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action_kind"],
+        "properties": {
+          "action_kind": { "enum": ["external_send", "delete", "payment", "submit", "modify_system", "publish", "create_draft", "create_reminder"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "status": { "enum": ["draft", "planned", "simulated", "awaiting_confirmation", "running", "verified", "blocked", "cancelled"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}
