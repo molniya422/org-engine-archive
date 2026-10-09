@@ -27,6 +27,7 @@ EXPECTED_SCHEMAS = {
     "task-contract",
     "user-fact",
     "user-rule",
+    "capability-pack",
 }
 
 
@@ -51,15 +52,17 @@ class TestCanonicalSchemas(unittest.TestCase):
     def _schema(self, name: str) -> dict:
         return json.loads((SCHEMA_DIR / f"{name}.schema.json").read_text(encoding="utf-8"))
 
-    def test_all_nine_schemas_exist(self):
+    def test_all_ten_schemas_exist(self):
         found = {
             p.stem[: -len(".schema")]
             for p in SCHEMA_DIR.glob("*.schema.json")
         }
         self.assertEqual(found, EXPECTED_SCHEMAS)
 
-    def test_fixtures_cover_all_nine(self):
-        self.assertEqual(set(self.fixtures.keys()), EXPECTED_SCHEMAS)
+    def test_fixtures_cover_all_canonical(self):
+        # capability-pack is structural-only (no fixture)
+        without_pack = EXPECTED_SCHEMAS - {'capability-pack'}
+        self.assertEqual(set(self.fixtures.keys()), without_pack)
 
     def _validate(self, name: str, instance, expect_valid: bool, note: str):
         if self.have_jsonschema:

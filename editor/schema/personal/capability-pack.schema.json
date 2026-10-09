@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capability-pack.schema.json",
+  "title": "Capability Pack",
+  "description": "能力包声明：接入必须引用 P5.1 工具注册表里已存在的工具与验证器；能力描述不得降低工具自身的风险、权限和确认要求。",
+  "type": "object",
+  "required": [
+    "id", "version", "task_types", "required_fields", "tool_refs",
+    "required_scopes", "risk", "confirmation_policy", "evidence_requirements",
+    "verifier_refs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "pattern": "^cap_[a-z0-9_]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "task_types": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "required_fields": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "tool_refs": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z_]+$" }
+    },
+    "required_scopes": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "risk": { "enum": ["low", "medium", "high"] },
+    "confirmation_policy": {
+      "type": "object",
+      "required": ["mode"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["none", "per_action", "per_pack_session"] },
+        "high_risk_kinds": {
+          "type": "array",
+          "items": { "enum": ["external_send", "delete", "submit", "payment"] }
+        }
+      }
+    },
+    "evidence_requirements": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "min_count"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "min_count": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "verifier_refs": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z_]+$" }
+    },
+    "enabled": { "type": "boolean", "default": false }
+  }
+}
