@@ -1,0 +1,66 @@
+{
+  "$comment": "P0.6 Octop tool-receipt fixture. Each event follows the Octop TrajectoryEvent shape (src/octop/infra/history/trajectory/types.py) exactly as returned by TrajectoryEventOut (src/octop/api/routers/chat/trajectory.py). Read via PersonalDecisionProtocol (editor/backend-server/src/personal/protocol.ts + engine/personal/protocols/octop.py).",
+  "octop_version": "1.0.2b5",
+  "events": [
+    {
+      "event_id": "ev_read_file_001",
+      "thread_id": "thr_inbox_0421",
+      "agent_id": "personal-assistant",
+      "seq": 17,
+      "ts": 1760064000.0,
+      "kind": "tool",
+      "turn_id": "turn_081",
+      "request_seq": 12,
+      "is_error": false,
+      "summary": "tool read_file",
+      "payload": {
+        "call_id": "call_0d1e",
+        "name": "read_file",
+        "args": { "path": "workspace/inbox/a.pdf" },
+        "result": {
+          "content": "A4 报销单，含 3 页扫描，抬头为 2026-10 差旅报销。",
+          "mime": "application/pdf",
+          "pages": 3
+        }
+      }
+    },
+    {
+      "event_id": "ev_external_send_002",
+      "thread_id": "thr_inbox_0421",
+      "agent_id": "personal-assistant",
+      "seq": 41,
+      "ts": 1760064600.0,
+      "kind": "tool",
+      "turn_id": "turn_083",
+      "request_seq": 15,
+      "is_error": true,
+      "summary": "tool external_send",
+      "payload": {
+        "call_id": "call_4f9c",
+        "name": "external_send",
+        "args": { "to": "reimburse@example.com", "subject": "2026-10 报销单" },
+        "result": {
+          "error": "smtp timeout after 10s",
+          "status": "failed"
+        }
+      }
+    },
+    {
+      "event_id": "ev_external_send_003",
+      "thread_id": "thr_inbox_0421",
+      "agent_id": "personal-assistant",
+      "seq": 58,
+      "ts": 1760065200.0,
+      "kind": "tool",
+      "turn_id": "turn_085",
+      "request_seq": 18,
+      "is_error": true,
+      "summary": "tool external_send cancelled by user",
+      "payload": {
+        "call_id": "call_7a2b",
+        "name": "external_send",
+        "args": { "to": "reimburse@example.com", "subject": "2026-10 报销单" }
+      }
+    }
+  ]
+}
