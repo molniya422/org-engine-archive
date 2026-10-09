@@ -83,6 +83,20 @@ export interface DecisionTrace {
 
 // -- API client ----------------------------------------------------------------
 
+export interface ProviderHealthReport {
+  provider: string;
+  base_url: string;
+  local_only: boolean;
+  model: string | null;
+  ok: boolean;
+  detail: string;
+  models_loaded: string[];
+  context_length: number | null;
+  json_mode: boolean;
+  checked_at: string;
+  fallback_options: string[];
+}
+
 export const personalApi = {
   listFacts: (status?: string) =>
     request<{ facts: UserFact[] }>(`/api/v1/personal/facts${status ? `?status=${status}` : ''}`),
@@ -124,4 +138,8 @@ export const personalApi = {
 
   taskTraces: (taskId: string) =>
     request<{ traces: DecisionTrace[] }>(`/api/v1/personal/traces/${taskId}`),
+
+  // P2.4 local model diagnostics (read-only, loopback probes only)
+  modelHealth: (): Promise<ProviderHealthReport> =>
+    request<ProviderHealthReport>('/api/v1/personal/model/health'),
 };
