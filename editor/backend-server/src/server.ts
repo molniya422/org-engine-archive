@@ -50,7 +50,7 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   const workflowStore = new WorkflowConfigStore();
   registerWorkflowRoutes(app, workflowStore);
   registerSkillRoutes(app, pool);
-  registerRunRoutes(app, runManager);
+  registerRunRoutes(app, runManager, persistence);
   registerWsRoutes(app, runManager, persistence);
   registerMcpRoutes(app);
   registerTemplateRoutes(app);

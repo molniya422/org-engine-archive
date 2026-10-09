@@ -1,0 +1,87 @@
+
+> org-engine-editor@0.1.0 test
+> npm run test:backend && npm run test:frontend
+
+
+> org-engine-editor@0.1.0 test:backend
+> cd backend-server && npm test
+
+
+> org-engine-editor-backend@0.1.0 test
+> vitest run
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/claude-ecosystem/org-engine/editor/backend-server[39m
+
+ [32m✓[39m tests/binding-resolver.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m tests/learning-autonomy.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32m✓[39m tests/insights.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 67[2mms[22m[39m
+ [32m✓[39m tests/migrate-org.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/run-manager.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 265[2mms[22m[39m
+ [32m✓[39m tests/store.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 421[2mms[22m[39m
+   [33m[2m✓[22m[39m Store validation[2m > [22mrejects invalid config [33m362[2mms[22m[39m
+ [32m✓[39m tests/org-config-v2.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 58[2mms[22m[39m
+ [32m✓[39m tests/validator.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 80[2mms[22m[39m
+ [32m✓[39m tests/e2e-org-workflow.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 37[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/learning-paths.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m tests/scanner.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 102[2mms[22m[39m
+ [32m✓[39m tests/adapter-client.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 63[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/workflow-config.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 88[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't3.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't3.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't4.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't4.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't4.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/learning-routes.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 2178[2mms[22m[39m
+   [33m[2m✓[22m[39m learning revert + audit[2m > [22mPOST revert reverts an applied proposal [33m413[2mms[22m[39m
+   [33m[2m✓[22m[39m learning auto-apply[2m > [22mPOST auto-apply respects the breaker once exhausted [33m627[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/learning-apply.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 3763[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22madd_role adds a role and commits [33m745[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22mrebind_skill swaps bound skill [33m483[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22munbind_skill prunes role, and empty dept (bounds minItems 1) [33m499[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22mbump_contract increments version [33m467[2mms[22m[39m
+   [33m[2m✓[22m[39m revertProposal[2m > [22mreverts an applied proposal via git [33m606[2mms[22m[39m
+   [33m[2m✓[22m[39m revertProposal[2m > [22mrefuses to revert a stale commit (not HEAD) [33m739[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m15 passed[39m[22m[90m (15)[39m
+[2m      Tests [22m [1m[32m75 passed[39m[22m[90m (75)[39m
+[2m   Start at [22m 16:47:30
+[2m   Duration [22m 5.21s[2m (transform 1.28s, setup 0ms, collect 3.96s, tests 7.16s, environment 4ms, prepare 2.83s)[22m
+
+
+> org-engine-editor@0.1.0 test:frontend
+> cd frontend && npm test
+
+
+> org-engine-editor-frontend@0.1.0 test
+> vitest run --passWithNoTests
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/claude-ecosystem/org-engine/editor/frontend[39m
+
+ [32m✓[39m src/lib/binding-check.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m src/components/EvolutionPanel.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[90m 117[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m11 passed[39m[22m[90m (11)[39m
+[2m   Start at [22m 16:47:37
+[2m   Duration [22m 2.56s[2m (transform 121ms, setup 286ms, collect 344ms, tests 120ms, environment 2.09s, prepare 278ms)[22m
+
+EXIT=0

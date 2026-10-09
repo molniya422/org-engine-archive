@@ -1,0 +1,5 @@
+
+> org-engine-editor@0.1.0 build:electron
+> cd electron && npx tsc -p tsconfig.json
+
+build:electron EXIT=0

@@ -10,6 +10,7 @@ import { t } from '@/i18n';
 import {
   ArrowLeft, Activity, Terminal, Wifi, WifiOff,
   ListOrdered, MessageSquare, Play, Pause, ClipboardCopy, Check,
+  AlertTriangle, RotateCcw, FileText,
 } from 'lucide-react';
 
 type TimelineEntry = { id: string; label: string; meta?: string; eventIndex: number };
@@ -49,6 +50,9 @@ export function RunMonitorView() {
   const lastEvent = currentRun.events[currentRun.events.length - 1];
   const gatewayPrompt = currentRun.status === 'awaiting_user' && lastEvent?.type === 'gateway_prompt' ? lastEvent : null;
   const isActive = currentRun.status === 'running' || currentRun.status === 'queued';
+  const isBlocked = currentRun.status === 'blocked';
+  const blockReason = (currentRun as any).blockReason;
+  const runsDirHint = '~/.org-engine-editor/runs';
 
   const statusVariant: Record<string, 'default' | 'accent' | 'muted' | 'destructive' | 'outline'> = {
     queued: 'muted', running: 'accent', awaiting_user: 'outline', done: 'muted', cancelled: 'outline', blocked: 'destructive',
@@ -106,6 +110,24 @@ export function RunMonitorView() {
         <span className="truncate">{t('Task')}: <span className="text-foreground">{currentRun.task}</span></span>
         <span className="shrink-0">{t('Organization')}: <span className="text-foreground">{currentRun.orgId}</span></span>
       </div>
+
+      {/* Blocked Banner */}
+      {isBlocked && (
+        <div className="px-4 py-3 border-b border-destructive/30 bg-destructive/5 flex items-center gap-3">
+          <AlertTriangle size={15} className="text-destructive shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[12px] text-destructive font-medium">
+              {t('blocked')} — {blockReason || t('Reason unknown')}
+            </div>
+            <div className="font-mono text-[10.5px] text-muted-foreground mt-0.5 flex items-center gap-1">
+              <FileText size={10} /> {t('Logs')}: {runsDirHint}/{currentRun.runId}/state.json
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => navigate(-1)}>
+            <RotateCcw size={12} /> {t('Rerun')}
+          </Button>
+        </div>
+      )}
 
       {/* Three-Panel Console */}
       <div className="flex-1 grid grid-cols-1 md:grid-cols-[200px_1fr_280px] overflow-hidden min-h-0">

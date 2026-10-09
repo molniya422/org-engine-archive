@@ -14,6 +14,7 @@ interface RunState {
   events: any[];
   createdAt: string;
   updatedAt: string;
+  blockReason?: string;
 }
 
 interface RunStoreState {

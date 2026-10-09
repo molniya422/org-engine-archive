@@ -1,0 +1,9 @@
+
+> org-engine-editor@0.1.0 build:backend
+> esbuild backend-server/src/server.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/server.cjs
+
+
+  backend-server\bundle\server.cjs  1.9mb ⚠️
+
+⚡ Done in 96ms
+build:backend EXIT=0

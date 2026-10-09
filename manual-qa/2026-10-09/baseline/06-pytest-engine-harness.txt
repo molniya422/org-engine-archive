@@ -1,0 +1,711 @@
+................EEEEEEE................................................. [ 58%]
+.......F.FFFF......FF....FFFFFFFFFFF................                     [100%]
+=================================== ERRORS ====================================
+____ ERROR collecting engine/harness/test_hybrid_orchestrator_20rounds.py _____
+ImportError while importing test module 'D:\claude-ecosystem\org-engine\engine\harness\test_hybrid_orchestrator_20rounds.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\jiqixuexi\anaconda\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+engine\harness\test_hybrid_orchestrator_20rounds.py:71: in <module>
+    from metrics_core import (
+E   ModuleNotFoundError: No module named 'metrics_core'
+_______ ERROR collecting engine/harness/test_multiagent_toolcall_e2e.py _______
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\runner.py:341: in from_call
+    result: Optional[TResult] = func()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\runner.py:372: in <lambda>
+    call = CallInfo.from_call(lambda: list(collector.collect()), "collect")
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:531: in collect
+    self._inject_setup_module_fixture()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:545: in _inject_setup_module_fixture
+    self.obj, ("setUpModule", "setup_module")
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:310: in obj
+    self._obj = obj = self._getobj()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:528: in _getobj
+    return self._importtestmodule()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:617: in _importtestmodule
+    mod = import_path(self.path, mode=importmode, root=self.config.rootpath)
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\pathlib.py:565: in import_path
+    importlib.import_module(module_name)
+D:\jiqixuexi\anaconda\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1204: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1176: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1147: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:690: in _load_unlocked
+    ???
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\assertion\rewrite.py:178: in exec_module
+    exec(co, module.__dict__)
+engine\harness\test_multiagent_toolcall_e2e.py:265: in <module>
+    sys.exit(1)
+E   SystemExit: 1
+------------------------------- Captured stdout -------------------------------
+
+=== Phase 1: Backup current feedback.md ===
+  PASS  backup created
+
+=== Phase 2: Inject test data ===
+  PASS  feedback.md injected with test data
+
+=== Phase 3: Run training-collect.py ===
+  PASS  training-collect.py exit code 0
+  PASS  MultiAgentOpt in output
+  PASS  ToolCallOpt in output
+
+=== Phase 4: Verify MultiAgentOpt meta.json ===
+  FAIL  MA tp=3 ！ got 1
+  PASS  MA fp=1
+  FAIL  MA fn=2 ！ got 1
+  PASS  MA has_data=True
+  PASS  MA metrics.f1 exists
+  PASS  MA metrics.precision reasonable
+  PASS  MA metrics.recall reasonable
+  FAIL  MA precision=0.75 ！ got 0.4999999975
+  FAIL  MA recall=0.6 ！ got 0.4999999975
+  FAIL  MA windowed has_data=True ！ 
+  FAIL  MA windowed.window_used=6 ！ got None
+  FAIL  MA windowed.f1 = cumulative f1 (all fit in window) ！ 
+  PASS  MA loss.total > 0
+  PASS  MA loss.core > 0
+
+=== Phase 5: Verify ToolCallOpt meta.json ===
+  FAIL  TC tp=2 ！ got 1
+  FAIL  TC fp=2 ！ got 1
+  FAIL  TC fn=2 ！ got 1
+  PASS  TC has_data=True
+  PASS  TC metrics.f1 exists
+  PASS  TC precision=0.5
+  PASS  TC recall=0.5
+  FAIL  TC windowed has_data=True ！ 
+  FAIL  TC windowed.window_used=6 ！ got None
+  PASS  TC loss.total > 0
+
+=== Phase 6: Verify SkillOpt unchanged ===
+  FAIL  SK tp=6 (unchanged) ！ 
+  PASS  SK fp=1 (unchanged)
+  FAIL  SK fn=2 (unchanged) ！ 
+
+=== Phase 7: Verify global config integrity ===
+  FAIL  version=3.0 ！ 
+  FAIL  window_size=20 ！ 
+  FAIL  ema_lambda removed ！ 
+  PASS  adjustment_enabled=False
+
+=== Phase 8: Verify alert logic ===
+  FAIL  MA windowed F1 < f1_target (should alert) ！ windowed_f1=None, target=0.75
+  FAIL  TC windowed F1 < f1_target (should alert) ！ windowed_f1=None, target=0.75
+
+=== Phase 9: Verify adjustment blocked ===
+  PASS  MA should_adjust=False (disabled)
+  PASS  TC should_adjust=False (disabled)
+  PASS  MA should_adjust=False (signals<10)
+  PASS  TC should_adjust=False (signals<10)
+  PASS  MA should_adjust=True (enabled+signals+F1<target)
+
+=== Phase 10: Cleanup ！ restore original feedback.md ===
+  PASS  feedback.md restored
+  PASS  pre-restore collect exit 0
+
+=== Phase 11: Verify reset after cleanup ===
+  FAIL  MA2 tp=0 after cleanup ！ 
+  FAIL  MA2 fp=0 after cleanup ！ 
+  FAIL  MA2 fn=0 after cleanup ！ 
+  FAIL  MA2 has_data=False ！ 
+  FAIL  MA2 f1=None ！ 
+  PASS  MA2 windowed f1=None
+  FAIL  TC2 tp=0 after cleanup ！ 
+  FAIL  TC2 fp=0 after cleanup ！ 
+  FAIL  TC2 fn=0 after cleanup ！ 
+  FAIL  TC2 has_data=False ！ 
+  FAIL  TC2 f1=None ！ 
+  PASS  TC2 windowed f1=None
+  FAIL  SK2 tp=6 preserved ！ 
+
+=== Results: 28 pass, 30 fail ===
+SOME TESTS FAILED!
+_____________ ERROR collecting engine/harness/test_skillopt_v4.py _____________
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\runner.py:341: in from_call
+    result: Optional[TResult] = func()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\runner.py:372: in <lambda>
+    call = CallInfo.from_call(lambda: list(collector.collect()), "collect")
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:531: in collect
+    self._inject_setup_module_fixture()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:545: in _inject_setup_module_fixture
+    self.obj, ("setUpModule", "setup_module")
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:310: in obj
+    self._obj = obj = self._getobj()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:528: in _getobj
+    return self._importtestmodule()
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\python.py:617: in _importtestmodule
+    mod = import_path(self.path, mode=importmode, root=self.config.rootpath)
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\pathlib.py:565: in import_path
+    importlib.import_module(module_name)
+D:\jiqixuexi\anaconda\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1204: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1176: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1147: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:690: in _load_unlocked
+    ???
+D:\jiqixuexi\anaconda\Lib\site-packages\_pytest\assertion\rewrite.py:178: in exec_module
+    exec(co, module.__dict__)
+engine\harness\test_skillopt_v4.py:59: in <module>
+    conn = sqlite3.connect(str(DB_PATH))
+E   sqlite3.OperationalError: unable to open database file
+------------------------------- Captured stdout -------------------------------
+
+=== Test 1: trigger_log table ===
+_______ ERROR collecting engine/harness/test_training_loop_20rounds.py ________
+ImportError while importing test module 'D:\claude-ecosystem\org-engine\engine\harness\test_training_loop_20rounds.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+D:\jiqixuexi\anaconda\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+engine\harness\test_training_loop_20rounds.py:26: in <module>
+    from metrics_core import (
+E   ImportError: cannot import name 'compute_windowed_metrics' from 'metrics_core' (D:\claude-ecosystem\org-engine\engine\training-loop\metrics_core.py)
+____________________ ERROR at setup of test_error_handler _____________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 131
+  def test_error_handler(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:131
+_____________________ ERROR at setup of test_toml_config ______________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 160
+  def test_toml_config(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:160
+____________________ ERROR at setup of test_env_detection _____________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 193
+  def test_env_detection(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:193
+__________________ ERROR at setup of test_multiagent_dry_run __________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 217
+  def test_multiagent_dry_run(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:217
+_____________________ ERROR at setup of test_auto_summary _____________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 258
+  def test_auto_summary(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:258
+___________________ ERROR at setup of test_training_collect ___________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 289
+  def test_training_collect(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:289
+____________________ ERROR at setup of test_data_lifecycle ____________________
+file D:\claude-ecosystem\org-engine\engine\harness\test_all.py, line 333
+  def test_data_lifecycle(env: dict):
+E       fixture 'env' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, capfd, capfdbinary, caplog, capsys, capsysbinary, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\claude-ecosystem\org-engine\engine\harness\test_all.py:333
+================================== FAILURES ===================================
+__________________________ test_A3_empty_short_query __________________________
+
+    def test_A3_empty_short_query() -> None:
+        """A3: empty string and 'a' must not crash. Empty -> []."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:215: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283B18450>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_________________________ test_B1_weights_normalized __________________________
+
+    def test_B1_weights_normalized() -> None:
+        """B1: COST_WEIGHTS values are non-negative and bounded [0, 3.0]."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:275: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283E89610>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+___________________ test_B2_hungarian_fallback_correctness ____________________
+
+    def test_B2_hungarian_fallback_correctness() -> None:
+        """B2: force scipy ImportError ！ cheapest column still wins."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:297: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283AE1FD0>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_________________________ test_B3_matrix_shape_edges __________________________
+
+    def test_B3_matrix_shape_edges() -> None:
+        """B3: n=0 -> shape (1, 0); n=1 -> (1, 1); top_k>n -> return only n."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:338: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283A9BD10>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_____________________ test_B4_negative_gated_sim_handling _____________________
+
+    def test_B4_negative_gated_sim_handling() -> None:
+        """B4: when gated=1.0 (perfect), neg_gate component should weight-penalize
+        the gated; distance nonneg; high similarity ★ lower total cost."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:367: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283BB1210>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_________________________ test_D3_zero_topk_graceful __________________________
+
+    def test_D3_zero_topk_graceful() -> None:
+        """D3: top_k=0 must not crash and should return []."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:696: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283AEE210>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_________________________ test_D4_unicode_cjk_prompt __________________________
+
+    def test_D4_unicode_cjk_prompt() -> None:
+        """D4: CJK prompt must not crash and must return a list."""
+>       sa = load_sa()
+
+engine\harness\test_skill_attention_20dim.py:717: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+engine\harness\test_skill_attention_20dim.py:74: in load_sa
+    spec.loader.exec_module(sa)
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283BCFF50>
+path = 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+________________ test_trigger_log_schema_has_ranking_strategy _________________
+
+    def test_trigger_log_schema_has_ranking_strategy():
+        """ranking_strategy column must exist on trigger_log for A/B logging."""
+        r = subprocess.run(
+            [PY, str(HARNESS_ROOT / "config" / "harness" / "trigger-logger.py"),
+             "--prompt", "test",
+             "--session", "schema-rank-test-001"],
+            capture_output=True, timeout=30,
+        )
+>       assert r.returncode == 0, r.stderr
+E       AssertionError: b"D:/jiqixuexi/anaconda/python.exe: can't open file 'D:\\\\claude-ecosystem\\\\org-engine\\\\config\\\\harness\\\\trigger-logger.py': [Errno 2] No such file or directory\r
+E         "
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['D:/jiqixuexi/anaconda/python.exe', 'D:\\claude-ecosystem\\org-engine\\config\\harness\\trigger...\\\claude-ecosystem\\\\org-engine\\\\config\\\\harness\\\\trigger-logger.py': [Errno 2] No such file or directory\r\n").returncode
+
+engine\harness\test_skill_attention_cost_matrix.py:25: AssertionError
+_________________ test_load_tool_cost_map_empty_returns_zero __________________
+
+    def test_load_tool_cost_map_empty_returns_zero():
+        """Empty trigger_log ★ empty map (not error)."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec)
+        sys.modules["skill_attention"] = sa
+>       spec.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B284013FD0>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_______________________ test_load_fp_penalty_map_shape ________________________
+
+    def test_load_fp_penalty_map_shape():
+        """Map values must be in [0, 1]."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec)
+        sys.modules["skill_attention"] = sa
+>       spec.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283B37D50>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+__________________ test_build_cost_matrix_shape_and_weights ___________________
+
+    def test_build_cost_matrix_shape_and_weights():
+        """Shape (1, n_skills) and weights sum to 1.0 contribution."""
+        import importlib.util
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283B4DE50>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+__________ test_hungarian_assign_returns_at_most_top_k_in_cost_order __________
+
+    def test_hungarian_assign_returns_at_most_top_k_in_cost_order():
+        """Hungarian: at most top_k indices, ascending cost."""
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283A92450>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+______________________ test_hungarian_assign_edge_cases _______________________
+
+    def test_hungarian_assign_edge_cases():
+        """Empty and singleton must not raise."""
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283B1E250>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+___________ test_hungarian_assign_falls_back_when_scipy_unavailable ___________
+
+    def test_hungarian_assign_falls_back_when_scipy_unavailable():
+        """When scipy import is forced to fail, the function must still return ordered indices."""
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B284013110>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+_____________ test_query_skills_returns_ranking_strategy_metadata _____________
+
+    def test_query_skills_returns_ranking_strategy_metadata():
+        """query_skills must tag every result with ranking_strategy."""
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283F37C50>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+___________________ test_query_skills_strategy_topk_forced ____________________
+
+    def test_query_skills_strategy_topk_forced():
+        """strategy='topk' must always produce ranking_strategy=topk_fallback."""
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:186: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283F35F10>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+________________________ test_query_cli_strategy_topk _________________________
+
+    def test_query_cli_strategy_topk():
+        """CLI flag --strategy topk must be accepted by argparse."""
+        r = subprocess.run(
+            [
+                PY,
+                str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+                "query",
+                "--prompt",
+                "brainstorm ideas",
+                "--top-k",
+                "3",
+                "--strategy",
+                "topk",
+            ],
+            capture_output=True,
+            timeout=60,
+        )
+>       assert r.returncode == 0, f"CLI rejected --strategy: stderr={r.stderr[:200]}"
+E       AssertionError: CLI rejected --strategy: stderr=b"D:/jiqixuexi/anaconda/python.exe: can't open file 'D:\\\\claude-ecosystem\\\\org-engine\\\\config\\\\harness\\\\skill-attention.py': [Errno 2] No such file or directory\r\n"
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['D:/jiqixuexi/anaconda/python.exe', 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-a...\\claude-ecosystem\\\\org-engine\\\\config\\\\harness\\\\skill-attention.py': [Errno 2] No such file or directory\r\n").returncode
+
+engine\harness\test_skill_attention_cost_matrix.py:209: AssertionError
+________________ test_trigger_logger_writes_dual_strategy_rows ________________
+
+    def test_trigger_logger_writes_dual_strategy_rows():
+        """Both strategies produce trigger_log rows with the right ranking_strategy tag."""
+        spec2 = importlib.util.spec_from_file_location(
+            "skill_attention",
+            str(HARNESS_ROOT / "config" / "harness" / "skill-attention.py"),
+        )
+        sa = importlib.util.module_from_spec(spec2)
+        sys.modules["skill_attention"] = sa
+>       spec2.loader.exec_module(sa)
+
+engine\harness\test_skill_attention_cost_matrix.py:224: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+<frozen importlib._bootstrap_external>:936: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:1073: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x000001B283B70810>
+path = 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: 'D:\\claude-ecosystem\\org-engine\\config\\harness\\skill-attention.py'
+
+<frozen importlib._bootstrap_external>:1130: FileNotFoundError
+=========================== short test summary info ===========================
+FAILED engine/harness/test_skill_attention_20dim.py::test_A3_empty_short_query
+FAILED engine/harness/test_skill_attention_20dim.py::test_B1_weights_normalized
+FAILED engine/harness/test_skill_attention_20dim.py::test_B2_hungarian_fallback_correctness
+FAILED engine/harness/test_skill_attention_20dim.py::test_B3_matrix_shape_edges
+FAILED engine/harness/test_skill_attention_20dim.py::test_B4_negative_gated_sim_handling
+FAILED engine/harness/test_skill_attention_20dim.py::test_D3_zero_topk_graceful
+FAILED engine/harness/test_skill_attention_20dim.py::test_D4_unicode_cjk_prompt
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_trigger_log_schema_has_ranking_strategy
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_load_tool_cost_map_empty_returns_zero
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_load_fp_penalty_map_shape
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_build_cost_matrix_shape_and_weights
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_hungarian_assign_returns_at_most_top_k_in_cost_order
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_hungarian_assign_edge_cases
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_hungarian_assign_falls_back_when_scipy_unavailable
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_query_skills_returns_ranking_strategy_metadata
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_query_skills_strategy_topk_forced
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_query_cli_strategy_topk
+FAILED engine/harness/test_skill_attention_cost_matrix.py::test_trigger_logger_writes_dual_strategy_rows
+ERROR engine/harness/test_hybrid_orchestrator_20rounds.py
+ERROR engine/harness/test_multiagent_toolcall_e2e.py - SystemExit: 1
+ERROR engine/harness/test_skillopt_v4.py - sqlite3.OperationalError: unable t...
+ERROR engine/harness/test_training_loop_20rounds.py
+ERROR engine/harness/test_all.py::test_error_handler
+ERROR engine/harness/test_all.py::test_toml_config
+ERROR engine/harness/test_all.py::test_env_detection
+ERROR engine/harness/test_all.py::test_multiagent_dry_run
+ERROR engine/harness/test_all.py::test_auto_summary
+ERROR engine/harness/test_all.py::test_training_collect
+ERROR engine/harness/test_all.py::test_data_lifecycle
+18 failed, 99 passed, 11 errors in 12.28s
+EXIT=1
