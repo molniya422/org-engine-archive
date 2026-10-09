@@ -70,7 +70,7 @@ class TravelScenario:
         f = self.fields
         if re.search(r"\d+月\d+号", utterance):
             f["dates"] = "user_stated"   # 具体解析留给上游 intent 层
-        m = re.search(r"去([一-龥]{2,4}?)[，,。]|去([一-龥]{2,4})玩", utterance)
+        m = re.search(r"去([一-龥]+?)(?:玩|[，,。])", utterance)
         if m:
             f["destination"] = m.group(1) or m.group(2)
         m = re.search(r"(\d+|两|三|四)个?人", utterance)
