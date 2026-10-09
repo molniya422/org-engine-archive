@@ -23,6 +23,9 @@ import { SkillPool } from './skill-scanner/pool';
 import { OrchestratorClient } from './orchestrator-adapter/client';
 import { RunManager } from './run-manager/manager';
 import { RunPersistence } from './run-manager/persistence';
+import { PersonalStore } from './personal/store';
+import { EvidenceRepository } from './personal/evidence';
+import { registerPersonalRoutes } from './personal/routes';
 
 export interface ServerInfo {
   app: FastifyInstance;
@@ -80,6 +83,13 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   const here = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
   const learningDir = resolveLearningDir(here, home, process.env.ORG_ENGINE_LEARNING_DIR);
   await app.register(learningRoutes, { learningDir, orgsDir: join(home, 'orgs') });
+
+  // Personal domain (P1.2/P1.3/P1.4): facts/rules/tasks/evidence/traces.
+  // Store lives under <home>/personal/personal.sqlite (WAL), workspace-relative
+  // file evidence is resolved against the configured workspace root.
+  const personalStore = new PersonalStore({ dbPath: join(home, 'personal', 'personal.sqlite') });
+  const personalEvidence = new EvidenceRepository(personalStore, process.env.ORG_ENGINE_WORKSPACE ?? process.cwd());
+  registerPersonalRoutes(app, { store: personalStore, evidence: personalEvidence });
 
   // Expose store to health route via app decorator (typed)
   (app as any)._orgStore = store;

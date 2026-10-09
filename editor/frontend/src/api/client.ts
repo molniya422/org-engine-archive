@@ -45,7 +45,8 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+/** Generic JSON request helper; also reused by the personal-domain client. */
+export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const base = await getBaseUrl();
   const url = `${base}${path}`;
   dbg('request →', options?.method ?? 'GET', url);
