@@ -186,4 +186,26 @@ export function registerPersonalRoutes(app: FastifyInstance, opts: PersonalRoute
   app.get<{ Params: { taskId: string } }>('/api/v1/personal/traces/:taskId', async (req) => {
     return { traces: store.listTraces(req.params.taskId) };
   });
+
+  // -- labels (P4.3) -------------------------------------------------------
+  // User-facing plain-language labels for internal concepts. The frontend
+  // uses these on home/tasks surfaces; the raw trace terms remain available
+  // in this response for the advanced diagnostics page.
+
+  app.get('/api/v1/personal/labels', async () => {
+    const { roleLabel, routeLabel, statusLabel, actionKindLabel } = await import('./labels');
+    return {
+      roles: Object.fromEntries(
+        ['ceo', 'manager', 'worker', 'reviewer', 'gateway', 'secretary'].map((r) => [r, roleLabel(r)]),
+      ),
+      routes: Object.fromEntries(['simple', 'review', 'parallel'].map((r) => [r, routeLabel(r)])),
+      statuses: Object.fromEntries(
+        ['select', 'ask_user', 'needs_confirmation', 'blocked', 'policy_error',
+          'verified', 'incomplete', 'unverifiable', 'failed'].map((s) => [s, statusLabel(s)]),
+      ),
+      action_kinds: Object.fromEntries(
+        ['external_send', 'delete', 'submit', 'payment'].map((k) => [k, actionKindLabel(k)]),
+      ),
+    };
+  });
 }
