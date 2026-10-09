@@ -33,9 +33,10 @@ function loadSchemas() {
 describe('P1.1 canonical personal schemas', () => {
   const validators = loadSchemas();
 
-  it('loads all nine schemas', () => {
+  it('loads all canonical schemas', () => {
     expect(Object.keys(validators).sort()).toEqual([
       'action-proposal',
+      'capability-pack',
       'decision-trace',
       'evidence',
       'intent-envelope',
