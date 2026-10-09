@@ -1,18 +1,49 @@
 #!/usr/bin/env bash
-# lean-hooks installer — copies templates to Claude Code config directory
+# lean-hooks installer — copies templates to [CC] config directory
 set -euo pipefail
 
 TARGET="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 SOURCE="$(cd "$(dirname "$0")" && pwd)"
 
+# The harness scripts and training-loop modules live in the engine tree, not in
+# bridge/. Resolve the engine root explicitly and fail loudly when it is wrong —
+# the previous version copied 0 files while still printing "Installation
+# complete", which made a broken install look successful.
+if [ -n "${BRIDGE_ENGINE_ROOT:-}" ]; then
+  if [ ! -d "$BRIDGE_ENGINE_ROOT" ]; then
+    echo "ERROR: BRIDGE_ENGINE_ROOT does not exist: $BRIDGE_ENGINE_ROOT" >&2
+    exit 1
+  fi
+  ENGINE_ROOT="$(cd "$BRIDGE_ENGINE_ROOT" && pwd)"
+else
+  # Default: <repo>/engine, relative to this script at <repo>/bridge/install.sh
+  CANDIDATE="$(cd "$SOURCE/.." && pwd)/engine"
+  if [ -d "$CANDIDATE/harness" ]; then
+    ENGINE_ROOT="$CANDIDATE"
+  else
+    echo "ERROR: cannot locate the engine root (expected $CANDIDATE/harness)." >&2
+    echo "       Set BRIDGE_ENGINE_ROOT=/path/to/engine and re-run." >&2
+    exit 1
+  fi
+fi
+
+for required in "$ENGINE_ROOT/harness" "$ENGINE_ROOT/training-loop"; do
+  if [ ! -d "$required" ]; then
+    echo "ERROR: required engine directory not found: $required" >&2
+    exit 1
+  fi
+done
+
 echo "=== lean-hooks Installer ==="
 echo "Target: $TARGET"
+echo "Engine root: $ENGINE_ROOT"
 echo ""
 
 # Create directories
 mkdir -p "$TARGET/harness"
 mkdir -p "$TARGET/skill-feedback"
 mkdir -p "$TARGET/multiagent-feedback"
+mkdir -p "$TARGET/toolcall-feedback"
 mkdir -p "$TARGET/rules"
 mkdir -p "$TARGET/memory"
 mkdir -p "$TARGET/projects"
@@ -20,27 +51,50 @@ mkdir -p "$TARGET/data"
 mkdir -p "$TARGET/hooks"           # plugin directory
 mkdir -p "$TARGET/archive"         # rotated data
 
-# Copy harness scripts
-echo "[1/4] Installing harness scripts..."
-cp "$SOURCE/harness/"*.sh "$TARGET/harness/"
-cp "$SOURCE/harness/"*.py "$TARGET/harness/"
+# Copy harness scripts, counting what actually landed. On re-install cp
+# overwrites in place, so the file delta is 0 — count distinct files present
+# (idempotent re-install) plus a source-sample check to prove copies work.
+echo "[1/5] Installing harness scripts..."
+cp "$ENGINE_ROOT/harness/"*.sh "$TARGET/harness/"
+cp "$ENGINE_ROOT/harness/"*.py "$TARGET/harness/"
 chmod +x "$TARGET/harness/"*.sh 2>/dev/null || true
+HARNESS_COPIED=$(find "$TARGET/harness" -type f | wc -l)
+# Sanity: at least one installed file must match a source file by name.
+SAMPLE_OK=0
+for f in "$ENGINE_ROOT/harness/"*.py; do
+  if [ -f "$TARGET/harness/$(basename "$f")" ]; then SAMPLE_OK=1; break; fi
+done
+echo "  harness scripts installed: $HARNESS_COPIED"
 
 # Copy training-loop Python modules
 echo "  Installing training-loop modules..."
 mkdir -p "$TARGET/training-loop"
-cp "$SOURCE/training-loop/"*.py "$TARGET/training-loop/" 2>/dev/null || true
-cp "$SOURCE/training-loop/"*.json "$TARGET/training-loop/" 2>/dev/null || true
-cp "$SOURCE/training-loop/"*.md "$TARGET/training-loop/" 2>/dev/null || true
+cp "$ENGINE_ROOT/training-loop/"*.py "$TARGET/training-loop/" 2>/dev/null || true
+cp "$ENGINE_ROOT/training-loop/"*.json "$TARGET/training-loop/" 2>/dev/null || true
+cp "$ENGINE_ROOT/training-loop/"*.md "$TARGET/training-loop/" 2>/dev/null || true
+TRAINING_COUNT=$(find "$TARGET/training-loop" -type f | wc -l)
+echo "  training-loop modules installed: $TRAINING_COUNT"
+
+# A silent zero-copy is the exact failure this check exists for.
+if [ "$HARNESS_COPIED" -eq 0 ] || [ "$SAMPLE_OK" -eq 0 ]; then
+  echo "ERROR: harness scripts were not copied from $ENGINE_ROOT/harness." >&2
+  echo "       Refusing to report a successful installation." >&2
+  exit 1
+fi
 
 # Copy templates
-echo "[2/4] Installing templates..."
-cp "$SOURCE/templates/skill-feedback/"*.json "$TARGET/skill-feedback/" 2>/dev/null || true
-cp "$SOURCE/templates/skill-feedback/"*.md "$TARGET/skill-feedback/" 2>/dev/null || true
-cp "$SOURCE/templates/multiagent-feedback/"*.json "$TARGET/multiagent-feedback/" 2>/dev/null || true
-cp "$SOURCE/templates/multiagent-feedback/"*.md "$TARGET/multiagent-feedback/" 2>/dev/null || true
-cp "$SOURCE/templates/rules/"*.md "$TARGET/rules/" 2>/dev/null || true
-cp "$SOURCE/templates/memory/"*.md "$TARGET/memory/" 2>/dev/null || true
+echo "[2/5] Installing templates..."
+for name in skill-feedback multiagent-feedback toolcall-feedback rules; do
+  if [ -d "$SOURCE/templates/$name" ]; then
+    cp "$SOURCE/templates/$name/"* "$TARGET/$name/" 2>/dev/null || true
+  fi
+done
+if [ -d "$SOURCE/templates/memory" ]; then
+  cp "$SOURCE/templates/memory/"* "$TARGET/memory/" 2>/dev/null || true
+fi
+if [ -d "$SOURCE/templates/training-loop" ]; then
+  cp "$SOURCE/templates/training-loop/"* "$TARGET/training-loop/" 2>/dev/null || true
+fi
 
 # Copy lean-hooks.toml (don't overwrite existing)
 if [ ! -f "$TARGET/lean-hooks.toml" ]; then
@@ -50,14 +104,14 @@ else
     echo "  lean-hooks.toml already exists — merge manually"
 fi
 
-# Copy example plugin
+# Copy example plugins
 if [ -d "$SOURCE/hooks" ]; then
     cp "$SOURCE/hooks/"*.sh "$TARGET/hooks/" 2>/dev/null || true
     echo "  Copied example plugins"
 fi
 
 # Copy settings template (don't overwrite existing)
-echo "[3/4] Setting up config files..."
+echo "[3/5] Setting up config files..."
 if [ ! -f "$TARGET/settings.json" ]; then
     cp "$SOURCE/settings.template.json" "$TARGET/settings.json"
     echo "  Created settings.json from template"
@@ -73,7 +127,7 @@ else
 fi
 
 # Post-install check
-echo "[4/4] Verifying..."
+echo "[4/5] Verifying..."
 PY=""
 if command -v python3 &>/dev/null; then
     PY="python3"
@@ -94,12 +148,17 @@ if [ -n "$PY" ] && [ -f "$TARGET/harness/db-migrate.py" ]; then
 fi
 
 echo ""
+echo "[5/5] Summary"
+echo "  harness scripts:     $HARNESS_COPIED"
+echo "  training-loop files: $TRAINING_COUNT"
+echo "  target directory:    $TARGET"
+echo ""
 echo "=== Installation complete ==="
 echo "Next steps:"
 echo "  1. Review $TARGET/settings.json — ensure hooks match your setup"
 echo "  2. Set HARNESS_PYTHON if Python is in a non-standard location"
 echo "  3. (Optional) Set SKILL_ATTENTION_MODEL_DIR for semantic skill matching"
-echo "  4. Restart Claude Code"
+echo "  4. Restart [CC]"
 echo ""
 echo "To disable hooks temporarily:"
 echo "  export DISABLED_HOOKS=\"multiagent-detect\""

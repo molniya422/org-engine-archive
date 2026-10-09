@@ -41,7 +41,23 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   const runManager = new RunManager(client, persistence);
 
   // Plugins
-  await app.register(cors, { origin: true });
+  // CORS allowlist: the backend has no auth layer and holds org configs, runs and
+  // (later) personal data, so it must not reflect arbitrary origins — `origin: true`
+  // would let any website read localhost responses. Default to loopback dev
+  // origins; override with ORG_ENGINE_ALLOWED_ORIGINS (comma-separated).
+  const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+  const allowedOrigins = new Set(
+    (process.env.ORG_ENGINE_ALLOWED_ORIGINS?.trim()
+      ? process.env.ORG_ENGINE_ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+      : DEFAULT_ALLOWED_ORIGINS),
+  );
+  await app.register(cors, {
+    origin: (incoming, cb) => {
+      // No Origin header: same-origin page, non-browser client (tests, CLI, MCP).
+      if (!incoming) return cb(null, true);
+      cb(null, allowedOrigins.has(incoming));
+    },
+  });
   await app.register(websocket);
 
   // Routes
@@ -68,11 +84,15 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   // Expose store to health route via app decorator (typed)
   (app as any)._orgStore = store;
 
-  // Try ports starting from startPort, increment on conflict
+  // Try ports starting from startPort, increment on conflict.
+  // Bind loopback by default: the backend has no auth layer, so listening on all
+  // interfaces would expose org configs, runs and personal data to the LAN.
+  // Set ORG_ENGINE_HOST to override deliberately.
+  const host = process.env.ORG_ENGINE_HOST?.trim() || '127.0.0.1';
   let actualPort = startPort;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
-      await app.listen({ port: actualPort });
+      await app.listen({ port: actualPort, host });
       break;
     } catch (err: any) {
       if (err?.code === 'EADDRINUSE' || err?.message?.includes('EADDRINUSE')) {
@@ -83,7 +103,7 @@ export async function startServer(port?: number): Promise<ServerInfo> {
     }
   }
 
-  console.log(`Server on :${actualPort}`);
+  console.log(`Server on ${host}:${actualPort}`);
   return { app, port: actualPort };
 }
 
