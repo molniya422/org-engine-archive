@@ -21,11 +21,12 @@ const requireNative = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { DatabaseSync } = requireNative('node:sqlite') as typeof import('node:sqlite');
 
-export const PERSONAL_SCHEMA_VERSION = 2;
+export const PERSONAL_SCHEMA_VERSION = 3;
 
 const MIGRATIONS = [
   '001_personal.sql',
   '002_learning_signals.sql',
+  '003_learning_versions.sql',
 ];
 
 export class PersonalValidationError extends Error {
@@ -463,6 +464,107 @@ export class PersonalStore {
       .prepare(`SELECT COUNT(*) AS n FROM learning_signals WHERE event = ?`)
       .get(event) as any;
     return row ? Number(row.n) : 0;
+  }
+
+  // -- learning versions (P7.3) ---------------------------------------------
+
+  /**
+   * Upsert a config version row. Content is immutable once written — updates
+   * may only change status / eval_report / updated_at (audit-tracked outside).
+   */
+  saveLearningVersion(v: Record<string, unknown>): void {
+    if (!['facts', 'rules', 'policy', 'prompts'].includes(String(v.kind))) {
+      throw new PersonalValidationError(`unknown learning version kind: ${v.kind}`);
+    }
+    if (!['applied', 'enabled', 'superseded', 'rolled_back'].includes(String(v.status))) {
+      throw new PersonalValidationError(`unknown learning version status: ${v.status}`);
+    }
+    const existing = this.db
+      .prepare(`SELECT content FROM learning_versions WHERE version_id = ?`)
+      .get(String(v.version_id)) as any;
+    if (existing && v.content !== undefined) {
+      const same = JSON.stringify(JSON.parse(existing.content)) === JSON.stringify(v.content);
+      if (!same) {
+        throw new PersonalValidationError(`version ${v.version_id} content is immutable`);
+      }
+    }
+    this.db
+      .prepare(`
+      INSERT INTO learning_versions
+        (version_id, kind, seq, content, proposal_id, status, eval_report, created_at, updated_at)
+      VALUES (@version_id, @kind, @seq, @content, @proposal_id, @status, @eval_report, @created_at, @updated_at)
+      ON CONFLICT(version_id) DO UPDATE SET
+        status = excluded.status, eval_report = excluded.eval_report, updated_at = excluded.updated_at
+    `)
+      .run({
+        version_id: v.version_id,
+        kind: v.kind,
+        seq: v.seq ?? 1,
+        content: JSON.stringify(v.content ?? {}),
+        proposal_id: v.proposal_id,
+        status: v.status,
+        eval_report: v.eval_report ?? '',
+        created_at: (v as any).created_at ?? nowIso(),
+        updated_at: nowIso(),
+      });
+    this.audit('system', 'learning.version', 'learning', String(v.version_id), {
+      kind: v.kind, status: v.status, proposal_id: v.proposal_id,
+    });
+  }
+
+  listLearningVersions(kind?: string): Array<Record<string, unknown>> {
+    const rows = (
+      kind
+        ? this.db.prepare(`SELECT * FROM learning_versions WHERE kind = ? ORDER BY seq`).all(kind)
+        : this.db.prepare(`SELECT * FROM learning_versions ORDER BY kind, seq`).all()
+    ) as any[];
+    return rows.map((r) => ({
+      version_id: r.version_id,
+      kind: r.kind,
+      seq: r.seq,
+      content: JSON.parse(r.content),
+      proposal_id: r.proposal_id,
+      status: r.status,
+      eval_report: r.eval_report,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    }));
+  }
+
+  getLearningVersion(versionId: string): Record<string, unknown> | null {
+    const row = this.db
+      .prepare(`SELECT * FROM learning_versions WHERE version_id = ?`)
+      .get(versionId) as any;
+    if (!row) return null;
+    return {
+      version_id: row.version_id,
+      kind: row.kind,
+      seq: row.seq,
+      content: JSON.parse(row.content),
+      proposal_id: row.proposal_id,
+      status: row.status,
+      eval_report: row.eval_report,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  /** The currently enabled version for a kind (status = 'enabled'). */
+  activeLearningVersion(kind: string): Record<string, unknown> | null {
+    const rows = this.db
+      .prepare(`SELECT * FROM learning_versions WHERE kind = ? ORDER BY seq DESC`).all(kind) as any[];
+    for (const r of rows) {
+      if (r.status === 'enabled') {
+        return { ...r, content: JSON.parse(r.content) };
+      }
+    }
+    return null;
+  }
+
+  listLearningProposals(): Array<Record<string, unknown>> {
+    return (this.db
+      .prepare(`SELECT * FROM learning_proposals ORDER BY updated_at DESC`).all() as any[])
+      .map((r) => ({ ...JSON.parse(r.proposal), updated_at: r.updated_at }));
   }
 
   // -- eval cases ----------------------------------------------------------
