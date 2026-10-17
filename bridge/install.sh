@@ -39,6 +39,19 @@ echo "Target: $TARGET"
 echo "Engine root: $ENGINE_ROOT"
 echo ""
 
+# P9.3 — 升级前备份：已存在的安装先打包进 archive/，升级不可恢复性为零。
+# （首装目录为空时跳过；备份只含 bridge 注入的文件，不含用户数据目录。）
+if [ -d "$TARGET/harness" ]; then
+    STAMP="$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$TARGET/archive"
+    if tar -czf "$TARGET/archive/backup-$STAMP.tar.gz" -C "$TARGET" harness training-loop 2>/dev/null; then
+        echo "[0/6] Backed up previous installation: archive/backup-$STAMP.tar.gz"
+    else
+        echo "ERROR: failed to back up the existing installation; refusing to upgrade in place." >&2
+        exit 1
+    fi
+fi
+
 # Create directories
 mkdir -p "$TARGET/harness"
 mkdir -p "$TARGET/skill-feedback"

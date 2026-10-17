@@ -88,6 +88,74 @@ case "$OUT" in
 esac
 
 echo ""
+echo "=== T7 (P9.3): upgrade creates a backup archive before overwriting ==="
+TARGET="$WORK/t7"
+mkdir -p "$TARGET"
+run_installer "$TARGET" "$ENGINE_ROOT" >/dev/null 2>&1
+# Simulate a pre-upgrade marker so we can prove the backup captured the OLD state.
+echo "# old harness" > "$TARGET/harness/upgrade-marker.sh"
+sleep 1
+set +e
+run_installer "$TARGET" "$ENGINE_ROOT" >/dev/null 2>&1
+RC=$?
+set -e
+BACKUPS=$(find "$TARGET/archive" -name 'backup-*.tar.gz' 2>/dev/null | wc -l)
+[ "$RC" -eq 0 ] && ok "upgrade install exit code 0" || bad "upgrade install exited $RC"
+[ "$BACKUPS" -ge 1 ] && ok "upgrade produced $BACKUPS backup archive(s)" || bad "no backup archive after upgrade"
+if [ "$BACKUPS" -ge 1 ]; then
+  # pipefail 陷阱：grep -q 提前关管道会让 tar 吃 SIGPIPE 拖垮整条管道，
+  # 因此先把列表取成变量再匹配，不做跨进程管道。
+  LISTING="$(tar -tzf "$TARGET/archive"/backup-*.tar.gz)"
+  case "$LISTING" in
+    *upgrade-marker.sh*) ok "backup contains the pre-upgrade state" ;;
+    *) bad "backup archive is missing the pre-upgrade marker" ;;
+  esac
+fi
+
+echo ""
+echo "=== T8 (P9.3): uninstall backs up first, removes bridge files, keeps user data ==="
+TARGET="$WORK/t8"
+mkdir -p "$TARGET"
+run_installer "$TARGET" "$ENGINE_ROOT" >/dev/null 2>&1
+mkdir -p "$TARGET/memory"
+echo "user memory" > "$TARGET/memory/keep-me.md"
+set +e
+CLAUDE_CONFIG_DIR="$TARGET" bash "$SCRIPT_DIR/../uninstall.sh" >/dev/null 2>&1
+RC=$?
+set -e
+[ "$RC" -eq 0 ] && ok "uninstall exit code 0" || bad "uninstall exited $RC"
+[ ! -d "$TARGET/harness" ] && ok "harness removed" || bad "harness still present after uninstall"
+[ -f "$TARGET/memory/keep-me.md" ] && ok "user memory preserved" || bad "user memory was deleted"
+UNINSTALL_BACKUPS=$(find "$TARGET/archive" -name 'uninstall-backup-*.tar.gz' 2>/dev/null | wc -l)
+[ "$UNINSTALL_BACKUPS" -ge 1 ] && ok "uninstall backup archive exists" || bad "no uninstall backup"
+
+echo ""
+echo "=== T9 (P9.3): personal event guard — bridge never auto-converts logs into facts ==="
+GUARD="$SCRIPT_DIR/../personal-event-guard.sh"
+chmod +x "$GUARD" 2>/dev/null || true
+# 启动事件：允许，数据目录落在用户选择的目录（ORG_ENGINE_HOME）。
+OUT="$(ORG_ENGINE_HOME="$WORK/personal-data" echo '{"type":"session_start"}' | ORG_ENGINE_HOME="$WORK/personal-data" bash "$GUARD")"
+echo "$OUT" | grep -q '"ok":true' && ok "session_start accepted" || bad "session_start rejected: $OUT"
+echo "$OUT" | grep -q "$WORK/personal-data" && ok "data dir honors ORG_ENGINE_HOME" || bad "data dir ignores ORG_ENGINE_HOME: $OUT"
+# 用户明确确认的事件：允许。
+OUT="$(echo '{"type":"user_confirmed_event","confirmed_by_user":true}' | bash "$GUARD")"
+echo "$OUT" | grep -q '"ok":true' && ok "user_confirmed_event accepted" || bad "confirmed event rejected: $OUT"
+# shell 历史 / 对话记录：拒绝（不允许自动转成个人事实）。
+for deny in shell_log conversation_log command_log transcript auto_fact; do
+  set +e
+  OUT="$(printf '{"type":"%s"}' "$deny" | bash "$GUARD" 2>&1)"
+  RC=$?
+  set -e
+  [ "$RC" -ne 0 ] && ok "$deny refused (exit $RC)" || bad "$deny was accepted — privacy violation"
+done
+# 未确认的 user_confirmed_event：拒绝。
+set +e
+OUT="$(echo '{"type":"user_confirmed_event"}' | bash "$GUARD" 2>&1)"
+RC=$?
+set -e
+[ "$RC" -ne 0 ] && ok "unconfirmed event refused" || bad "missing confirmed_by_user slipped through"
+
+echo ""
 echo "=================================="
 echo "Results: $PASS passed, $FAIL failed"
 echo "=================================="
