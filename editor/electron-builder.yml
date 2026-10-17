@@ -24,3 +24,6 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  # P9.1 — 卸载/升级永不删除用户数据目录（personal.sqlite、evidence）。
+  # 用户数据在 %APPDATA%/<userData>，不在安装目录，也不在 asar。
+  deleteAppDataOnUninstall: false

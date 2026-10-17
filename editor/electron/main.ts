@@ -59,12 +59,26 @@ function resolveProjectRoot(): string {
 }
 
 // ── Backend server startup (with graceful failure) ────────────────────────
+/**
+ * P9.1 — 数据路径治理：个人 SQLite 与 evidence 必须落在用户数据目录
+ * （app.getPath('userData')），绝不进入安装目录或 asar。这里在启动后端
+ * 前设置 ORG_ENGINE_HOME，后端（config.ts/PersonalStore）据此落盘。
+ * 首次启动会创建目录并写入权限说明；升级重装不覆盖该目录。
+ */
 async function startBackendServer(): Promise<number> {
   const projectRoot = resolveProjectRoot();
   const serverPath = path.join(projectRoot, 'backend-server', 'bundle', 'server.cjs');
 
   if (!fs.existsSync(serverPath)) {
     throw new Error(`Backend server bundle not found at:\n  ${serverPath}`);
+  }
+
+  try {
+    const userDataPath = app.getPath('userData');
+    fs.mkdirSync(userDataPath, { recursive: true });
+    process.env.ORG_ENGINE_HOME = userDataPath;
+  } catch {
+    // userData 不可得时保留默认（~/.org-engine-editor），不要阻断启动
   }
 
   const { startServer } = require(serverPath);
