@@ -7,6 +7,7 @@
  * engine (Python) computes outcomes; this only renders them.
  */
 import React from 'react';
+import { PlanPreview, type PlannedAction, type EvidenceLink } from '../components/personal/PlanPreview';
 
 export interface SourcedTodo {
   title: string;
@@ -27,6 +28,10 @@ export interface MaterialOutcomeView {
   unresolved: UnresolvedItem[];
   reminder_candidates: Array<{ title: string; due: string; auto_created: boolean }>;
   draft_path: string;
+  /** P6.4 — 计划预览：用户先看「准备做什么」，再逐项确认。 */
+  plan?: { planned_actions: PlannedAction[] };
+  evidence_links?: EvidenceLink[];
+  onConfirmAction?: (action_id: string) => void;
 }
 
 const STATUS_TEXT: Record<string, string> = {
@@ -36,7 +41,9 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 export function PersonalTaskView({ outcome }: { outcome: MaterialOutcomeView }): React.ReactElement {
-  const { summary, todos, duplicates, unresolved, reminder_candidates, draft_path } = outcome;
+  const { summary, todos, duplicates, unresolved, reminder_candidates, draft_path,
+          plan, evidence_links = [], onConfirmAction } = outcome;
+  const completed = evidence_links.length > 0;
   return (
     <section aria-label="事项整理结果">
       <h2>材料整理结果</h2>
@@ -44,6 +51,16 @@ export function PersonalTaskView({ outcome }: { outcome: MaterialOutcomeView }):
         共 {summary.total_files} 份材料，可读取 {summary.readable} 份，
         {summary.unreadable > 0 ? `有 ${summary.unreadable} 份无法读取需要你确认` : '全部可读取'}。
       </p>
+
+      {/* P6.4: 计划先于执行——「计划做什么」在待办/提醒之前显示。 */}
+      {plan && plan.planned_actions.length > 0 && (
+        <PlanPreview
+          planned_actions={plan.planned_actions}
+          onConfirm={onConfirmAction ?? (() => {})}
+          completed={completed}
+          evidence_links={evidence_links}
+        />
+      )}
 
       <h3>待办（{todos.length}）</h3>
       <ul>
@@ -85,7 +102,8 @@ export function PersonalTaskView({ outcome }: { outcome: MaterialOutcomeView }):
       )}
 
       <p className="draft-note">整理结果已保存为草稿：{draft_path}（原文件未修改）</p>
-      <p className="status-note">{STATUS_TEXT.verified}</p>
+      {/* P6.4: 有计划数据时，完成状态只能由真实证据逐项说明，不能笼统宣称已完成。 */}
+      {!plan && <p className="status-note">{STATUS_TEXT.verified}</p>}
     </section>
   );
 }

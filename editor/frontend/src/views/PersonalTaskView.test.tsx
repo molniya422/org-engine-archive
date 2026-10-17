@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { PersonalTaskView, type MaterialOutcomeView } from './PersonalTaskView';
+import type { PlannedAction } from '../components/personal/PlanPreview';
 
 const OUTCOME: MaterialOutcomeView = {
   summary: { total_files: 10, readable: 8, unreadable: 2, with_dates: 4 },
@@ -38,5 +39,72 @@ describe('P5.4 PersonalTaskView', () => {
     render(<PersonalTaskView outcome={OUTCOME} />);
     expect(screen.getByText(/不会自动创建/)).toBeTruthy();
     expect(screen.getByText(/原文件未修改/)).toBeTruthy();
+  });
+});
+
+const ACTIONS: PlannedAction[] = [
+  {
+    action_id: 'a1',
+    label: '创建整理草稿',
+    basis: ['invoice_a.md', '报销单A'],
+    risk: 'low',
+    risk_label: '低风险',
+    changed_files: ['workspace/receipts/整理汇总.md'],
+    missing_information: [],
+    rollback: '删除新建的草稿文件即可撤销。',
+  },
+  {
+    action_id: 'a2',
+    label: '创建到期提醒',
+    basis: ['invoice_a.md'],
+    risk: 'low',
+    risk_label: '低风险',
+    changed_files: [],
+    missing_information: ['提醒时间'],
+    rollback: '在提醒列表里删除即可。',
+  },
+];
+
+describe('P6.4 PersonalTaskView — plan first', () => {
+  it('renders the plan before todos', () => {
+    render(<PersonalTaskView outcome={{ ...OUTCOME, plan: { planned_actions: ACTIONS } }} />);
+    const planHeading = screen.getByRole('heading', { name: '计划做什么' });
+    const todoHeading = screen.getByRole('heading', { name: /待办/ });
+    expect(planHeading.compareDocumentPosition(todoHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('confirms one action at a time through onConfirmAction', () => {
+    const onConfirmAction = vi.fn();
+    render(
+      <PersonalTaskView
+        outcome={{ ...OUTCOME, plan: { planned_actions: ACTIONS }, onConfirmAction }}
+      />,
+    );
+    const buttons = screen.getAllByRole('button', { name: '确认执行这一步' });
+    fireEvent.click(buttons[0]);
+    expect(onConfirmAction).toHaveBeenCalledTimes(1);
+    expect(onConfirmAction).toHaveBeenCalledWith('a1');
+  });
+
+  it('shows real evidence links and honest state after completion', () => {
+    render(
+      <PersonalTaskView
+        outcome={{
+          ...OUTCOME,
+          plan: { planned_actions: ACTIONS },
+          evidence_links: [
+            { label: '整理汇总.md', url: '/workspace/整理汇总.md', verification: 'verified' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText('完成情况')).toBeTruthy();
+    expect(screen.getByText(/已完成，已核对/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '确认执行这一步' })).toBeNull();
+  });
+
+  it('does not render a plan section when there are no planned actions', () => {
+    render(<PersonalTaskView outcome={{ ...OUTCOME, plan: { planned_actions: [] } }} />);
+    expect(screen.queryByRole('heading', { name: '计划做什么' })).toBeNull();
   });
 });
