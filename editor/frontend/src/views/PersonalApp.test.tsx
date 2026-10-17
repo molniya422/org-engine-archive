@@ -7,6 +7,7 @@ import { PersonalApp } from './PersonalApp';
 
 beforeEach(() => {
   localStorage.removeItem('ui-mode');
+  localStorage.setItem('personal-onboarded', '1'); // 既有用例已越过首启流程
   useModeStore.setState({ mode: 'personal' });
 });
 
@@ -64,6 +65,38 @@ function renderAt(url: string) {
     </MemoryRouter>,
   );
 }
+
+describe('P8.4/MUA-01 first-run onboarding', () => {
+  beforeEach(() => {
+    localStorage.removeItem('personal-onboarded');
+  });
+
+  it('first launch shows onboarding before the home screen', () => {
+    renderAt('/personal');
+    expect(screen.getByText('欢迎使用个人事务助手')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '我要办一件事' })).toBeNull();
+  });
+
+  it('completing onboarding lands on home and never repeats', () => {
+    const { unmount } = renderAt('/personal');
+    fireEvent.click(screen.getByRole('button', { name: '运行本地样例演练' }));
+    fireEvent.change(screen.getByLabelText('工作区'), { target: { value: 'D:\\我的资料' } });
+    fireEvent.click(screen.getByLabelText(/本机模型/));
+    fireEvent.click(screen.getByRole('button', { name: '完成，开始使用' }));
+    expect(localStorage.getItem('personal-onboarded')).toBe('1');
+    expect(screen.getByRole('button', { name: '我要办一件事' })).toBeTruthy();
+    unmount();
+
+    renderAt('/personal');
+    expect(screen.queryByText('欢迎使用个人事务助手')).toBeNull();
+  });
+
+  it('deep links (diagnostics) skip onboarding', () => {
+    localStorage.setItem('personal-onboarded', ''); // 未完成
+    renderAt('/personal/diagnostics/task_x');
+    expect(screen.getByText(/高级诊断/)).toBeTruthy();
+  });
+});
 
 describe('P8.4 default flow stays inside personal mode', () => {
   it('home → 我要办一件事 → task page → advanced diagnostics link', () => {

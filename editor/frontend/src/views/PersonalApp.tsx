@@ -8,6 +8,7 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PersonalHomeView } from './PersonalHomeView';
+import { PersonalOnboardingView } from './PersonalOnboardingView';
 import { PersonalTaskView, type MaterialOutcomeView } from './PersonalTaskView';
 import { PersonalRulesView } from './PersonalRulesView';
 import { PersonalMemoryView } from './PersonalMemoryView';
@@ -30,10 +31,28 @@ const SAMPLE_OUTCOME: MaterialOutcomeView = {
   draft_path: 'workspace/整理汇总.md',
 };
 
+const ONBOARDING_KEY = 'personal-onboarded';
+
 export function PersonalApp(): React.ReactElement {
   const navigate = useNavigate();
   const { tab, taskId } = useParams<{ tab?: string; taskId?: string }>();
   const [taskStarted, setTaskStarted] = React.useState(false);
+  // MUA-01 前置：首次启动先走 onboarding（三个问题 + 本地样例演练），
+  // 完成或跳过后落首页；标记持久化，之后不再出现。
+  const [onboarded, setOnboarded] = React.useState(
+    () => localStorage.getItem(ONBOARDING_KEY) === '1',
+  );
+
+  if (!onboarded && !tab && !taskId) {
+    return (
+      <PersonalOnboardingView
+        onComplete={() => {
+          localStorage.setItem(ONBOARDING_KEY, '1');
+          setOnboarded(true);
+        }}
+      />
+    );
+  }
 
   if (tab === 'diagnostics' || taskId !== undefined) {
     return (
