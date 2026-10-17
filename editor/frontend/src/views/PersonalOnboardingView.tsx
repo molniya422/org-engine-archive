@@ -106,7 +106,14 @@ export function PersonalOnboardingView({
         )}
       </fieldset>
 
-      <button disabled={!canFinish} onClick={() => onComplete({ workspace: workspace.trim(), model, privacy, permissions })}>
+      <button
+        disabled={!canFinish}
+        onClick={() => {
+          // canFinish 已含 privacy !== ''（TS 别名收窄保证此处 privacy 已定型）。
+          if (!canFinish) return;
+          onComplete({ workspace: workspace.trim(), model, privacy, permissions });
+        }}
+      >
         完成，开始使用
       </button>
       <button onClick={() => onSkipAdvanced?.()}>跳过高级配置（以后随时能改）</button>
