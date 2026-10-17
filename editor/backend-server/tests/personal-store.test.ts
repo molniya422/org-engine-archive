@@ -204,4 +204,85 @@ describe('PersonalStore', () => {
     expect(p.endsWith('personal.sqlite')).toBe(true);
     delete process.env.ORG_ENGINE_HOME;
   });
+
+  // -- P7.1 learning signals ------------------------------------------------
+
+  const SIGNAL = {
+    schema_version: 1,
+    id: 'sig_01',
+    event: 'repeated_correction',
+    task_id: 'task_01',
+    trace_id: 'decision_01',
+    evidence_ids: ['evidence_01'],
+    sensitivity: 'normal',
+    recorded_at: '2026-10-17T10:00:00Z',
+  };
+
+  it('round-trips a learning signal', () => {
+    const store = new PersonalStore({ dbPath: join(TMP, 'h.sqlite') });
+    store.saveTaskWithEvidence(TASK, [EVIDENCE]);
+    store.saveTrace(TRACE);
+    store.saveLearningSignal(SIGNAL);
+    const got = store.listLearningSignals('task_01');
+    expect(got).toHaveLength(1);
+    expect(got[0].event).toBe('repeated_correction');
+    expect(got[0].trace_id).toBe('decision_01');
+    store.close();
+  });
+
+  it('persists a learning signal across restart', () => {
+    const dbPath = join(TMP, 'i.sqlite');
+    let store = new PersonalStore({ dbPath });
+    store.saveTaskWithEvidence(TASK, [EVIDENCE]);
+    store.saveTrace(TRACE);
+    store.saveLearningSignal(SIGNAL);
+    store.close();
+
+    store = new PersonalStore({ dbPath });
+    expect(store.countLearningSignals('repeated_correction')).toBe(1);
+    expect(store.countLearningSignals('accepted')).toBe(0);
+    store.close();
+  });
+
+  it('counts signals by event type', () => {
+    const store = new PersonalStore({ dbPath: join(TMP, 'j.sqlite') });
+    store.saveTaskWithEvidence(TASK, [EVIDENCE]);
+    store.saveTrace(TRACE);
+    store.saveLearningSignal({ ...SIGNAL, id: 'sig_a', event: 'accepted' });
+    store.saveLearningSignal({ ...SIGNAL, id: 'sig_b', event: 'rejected' });
+    store.saveLearningSignal({ ...SIGNAL, id: 'sig_c', event: 'rejected' });
+    expect(store.countLearningSignals('accepted')).toBe(1);
+    expect(store.countLearningSignals('rejected')).toBe(2);
+    store.close();
+  });
+
+  it('refuses a signal without a trace or evidence', () => {
+    const store = new PersonalStore({ dbPath: join(TMP, 'k.sqlite') });
+    store.saveTaskWithEvidence(TASK, [EVIDENCE]);
+    store.saveTrace(TRACE);
+    expect(() => store.saveLearningSignal({ ...SIGNAL, id: 'sig_x', trace_id: '' })).toThrow(/task_id and trace_id/);
+    expect(() => store.saveLearningSignal({ ...SIGNAL, id: 'sig_y', evidence_ids: [] })).toThrow(/at least one evidence/);
+    expect(() => store.saveLearningSignal({ ...SIGNAL, id: 'sig_z', event: 'liked' })).toThrow(/unknown learning signal event/);
+    store.close();
+  });
+
+  it('the store never sees high-sensitivity raw text', () => {
+    // 高敏感信号由引擎先行脱敏——signal_json 里只能有事件类型，没有 before/after 正文。
+    const store = new PersonalStore({ dbPath: join(TMP, 'l.sqlite') });
+    store.saveTaskWithEvidence(TASK, [EVIDENCE]);
+    store.saveTrace(TRACE);
+    const redacted = {
+      ...SIGNAL,
+      id: 'sig_high',
+      sensitivity: 'high',
+      content_redacted: true,
+      // 没有 before/after/diff 字段——引擎侧已丢弃正文。
+    };
+    store.saveLearningSignal(redacted);
+    const raw = JSON.stringify(store.listLearningSignals());
+    expect(raw).not.toContain('before');
+    expect(raw).not.toContain('after');
+    expect(raw).not.toContain('diff');
+    store.close();
+  });
 });

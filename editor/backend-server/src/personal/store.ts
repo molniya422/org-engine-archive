@@ -21,7 +21,12 @@ const requireNative = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { DatabaseSync } = requireNative('node:sqlite') as typeof import('node:sqlite');
 
-export const PERSONAL_SCHEMA_VERSION = 1;
+export const PERSONAL_SCHEMA_VERSION = 2;
+
+const MIGRATIONS = [
+  '001_personal.sql',
+  '002_learning_signals.sql',
+];
 
 export class PersonalValidationError extends Error {
   constructor(message: string) {
@@ -74,10 +79,16 @@ export class PersonalStore {
     }
     if (current === PERSONAL_SCHEMA_VERSION) return;
 
-    const migrationSql = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), 'migrations', '001_personal.sql'),
-      'utf-8',
-    );
+    // Apply migrations sequentially, stepping schema_version from `current` to
+    // PERSONAL_SCHEMA_VERSION in one transaction.
+    const migrationSql = MIGRATIONS
+      .map((name) =>
+        readFileSync(
+          join(dirname(fileURLToPath(import.meta.url)), 'migrations', name),
+          'utf-8',
+        ),
+      )
+      .join('\n');
     this.db.exec('BEGIN');
     try {
       this.db.exec(migrationSql);
@@ -383,6 +394,75 @@ export class PersonalStore {
   getLearningProposal(id: string): Record<string, unknown> | null {
     const row = this.db.prepare(`SELECT * FROM learning_proposals WHERE id = ?`).get(id) as any;
     return row ? { ...JSON.parse(row.proposal), updated_at: row.updated_at } : null;
+  }
+
+  // -- learning signals (P7.1) ---------------------------------------------
+
+  /**
+   * Save a behavior signal. The signal JSON is ALREADY redacted by the engine
+   * (personal/learning/signals.py) before it reaches here — this store never
+   * sees high-sensitivity raw text. Every signal must link a task, a trace and
+   * at least one evidence row.
+   */
+  saveLearningSignal(sig: Record<string, unknown>): void {
+    if (!sig.task_id || !sig.trace_id) {
+      throw new PersonalValidationError(`learning signal needs task_id and trace_id`);
+    }
+    const evidenceIds = (sig.evidence_ids ?? []) as unknown[];
+    if (!Array.isArray(evidenceIds) || evidenceIds.length === 0) {
+      throw new PersonalValidationError(`learning signal needs at least one evidence_id`);
+    }
+    const events = ['accepted', 'edited', 'rejected', 'revoked', 'repeated_correction'];
+    if (!events.includes(String(sig.event))) {
+      throw new PersonalValidationError(`unknown learning signal event: ${sig.event}`);
+    }
+    this.db.exec('BEGIN');
+    try {
+      this.db
+        .prepare(`
+        INSERT INTO learning_signals
+          (id, event, task_id, trace_id, evidence_ids, sensitivity, signal_json, recorded_at, created_at)
+        VALUES (@id, @event, @task_id, @trace_id, @evidence_ids, @sensitivity, @signal_json, @recorded_at, @created_at)
+        ON CONFLICT(id) DO UPDATE SET
+          event = excluded.event, task_id = excluded.task_id, trace_id = excluded.trace_id,
+          evidence_ids = excluded.evidence_ids, sensitivity = excluded.sensitivity,
+          signal_json = excluded.signal_json, recorded_at = excluded.recorded_at
+      `)
+        .run({
+          id: sig.id,
+          event: sig.event,
+          task_id: sig.task_id,
+          trace_id: sig.trace_id,
+          evidence_ids: JSON.stringify(evidenceIds),
+          sensitivity: sig.sensitivity ?? 'normal',
+          signal_json: JSON.stringify(sig),
+          recorded_at: (sig.recorded_at as string) ?? nowIso(),
+          created_at: nowIso(),
+        });
+      this.audit('user', 'learning.signal', 'learning', String(sig.id), { event: sig.event, task_id: sig.task_id });
+      this.db.exec('COMMIT');
+    } catch (e) {
+      this.db.exec('ROLLBACK');
+      throw e;
+    }
+  }
+
+  listLearningSignals(taskId?: string, limit = 200): Array<Record<string, unknown>> {
+    const rows = (
+      taskId
+        ? this.db
+            .prepare(`SELECT * FROM learning_signals WHERE task_id = ? ORDER BY recorded_at DESC LIMIT ?`)
+            .all(taskId, limit)
+        : this.db.prepare(`SELECT * FROM learning_signals ORDER BY recorded_at DESC LIMIT ?`).all(limit)
+    ) as any[];
+    return rows.map((r) => JSON.parse(r.signal_json));
+  }
+
+  countLearningSignals(event: string): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS n FROM learning_signals WHERE event = ?`)
+      .get(event) as any;
+    return row ? Number(row.n) : 0;
   }
 
   // -- eval cases ----------------------------------------------------------
