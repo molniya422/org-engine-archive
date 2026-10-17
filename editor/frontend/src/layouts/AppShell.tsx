@@ -2,6 +2,7 @@
 
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useThemeStore } from '@/stores/theme-store';
+import { useModeStore } from '@/stores/mode-store';
 import { Button } from '@/components/ui/button';
 import { t } from '@/i18n';
 import {
@@ -18,6 +19,12 @@ import {
   CalendarDays,
   Radar,
   KeyRound,
+  Home,
+  Scale,
+  Brain,
+  Lightbulb,
+  Lock,
+  Wrench,
 } from 'lucide-react';
 
 /**
@@ -41,6 +48,7 @@ import {
  */
 export function AppShell() {
   const { theme, toggleTheme } = useThemeStore();
+  const { mode, toggleMode } = useModeStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -55,14 +63,25 @@ export function AppShell() {
     else navigate('/');
   };
 
-  const navItems = [
+  // P8.4 — 默认个人模式只显示用户侧入口；开发者入口（组织/工作流/运行
+  // 事件/诊断）全部留在高级模式，普通用户不被内部模型暴露。
+  const personalNav = [
+    { to: '/personal', end: true, icon: Home, label: '首页' },
+    { to: '/personal/rules', end: false, icon: Scale, label: '规则' },
+    { to: '/personal/memory', end: false, icon: Brain, label: '记忆' },
+    { to: '/personal/privacy', end: false, icon: Lock, label: '隐私' },
+    { to: '/personal/learning', end: false, icon: Lightbulb, label: '学习提案' },
+  ];
+  const advancedNav = [
     { to: '/', end: true, icon: LayoutDashboard, label: t('nav.home') },
     { to: '/templates', end: false, icon: SwatchBook, label: t('Playbooks') },
     { to: '/skills', end: false, icon: Cpu, label: t('nav.skills') },
     { to: '/meetings', end: false, icon: CalendarDays, label: '会议记录' },
     { to: '/comm', end: false, icon: Radar, label: '通信审计' },
     { to: '/products', end: false, icon: KeyRound, label: '产物注册表' },
+    { to: '/health', end: false, icon: ShieldCheck, label: '诊断' },
   ];
+  const navItems = mode === 'personal' ? personalNav : advancedNav;
 
   return (
     <div className="flex h-dvh w-screen overflow-hidden bg-background">
@@ -115,15 +134,15 @@ export function AppShell() {
           </button>
 
           <button
-            onClick={() => navigate('/health')}
+            onClick={toggleMode}
             className="flex items-center gap-3 h-9 px-2 rounded-sm text-muted-foreground hover:text-foreground hover:bg-secondary text-[13px] transition-colors duration-150 whitespace-nowrap"
-            title="诊断"
+            title={mode === 'personal' ? '切换到高级模式（开发者）' : '切换到个人模式'}
           >
-            <ShieldCheck size={17} />
+            <Wrench size={17} />
             <span className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-200">
-              诊断
-           </span>
-         </button>
+              {mode === 'personal' ? '高级模式' : '个人模式'}
+            </span>
+          </button>
 
           <div className="flex items-center gap-3 h-9 px-2 rounded-sm whitespace-nowrap">
             <span className="inline-block w-[7px] h-[7px] rounded-full bg-emerald-400 shrink-0" />

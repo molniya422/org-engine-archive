@@ -244,6 +244,8 @@ export function StudioView() {
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
+          {/* P8.4 — 该控制台属于高级模式：组织/工作流/学习洞察/运行事件保留在这里 */}
+          <Badge variant="outline" className="text-[10px]">高级模式</Badge>
           {currentOrg && (
             <span
               className="flex items-center gap-1.5 font-mono text-[10.5px]"
