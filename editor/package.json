@@ -20,7 +20,7 @@
     "test:backend": "cd backend-server && npm test",
     "test:frontend": "cd frontend && npm test",
     "build:harness": "pyinstaller scripts/build-harness.spec",
-    "build:backend": "esbuild backend-server/src/server.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/server.cjs",
+    "build:backend": "esbuild backend-server/src/server.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/server.cjs --banner:js=\"const import_meta_url = require('node:url').pathToFileURL(__filename).href;\" --define:import.meta.url=import_meta_url && node scripts/copy-migrations.cjs",
     "build:frontend": "cd frontend && cross-env NODE_ENV=production npx vite build",
     "build:electron": "cd electron && npx tsc -p tsconfig.json",
     "build:mcp": "esbuild backend-server/src/mcp/mcp-stdio.ts --bundle --platform=node --target=node22 --outfile=backend-server/bundle/mcp-stdio.cjs --external:@modelcontextprotocol/sdk --external:./node_modules/*",
@@ -30,7 +30,7 @@
   "devDependencies": {
     "concurrently": "^9.0.0",
     "cross-env": "^7.0.0",
-    "electron": "33.4.11",
+    "electron": "^35.7.5",
     "electron-builder": "^25.0.0",
     "esbuild": "^0.24.0"
   },

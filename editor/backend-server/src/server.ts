@@ -26,6 +26,7 @@ import { RunPersistence } from './run-manager/persistence';
 import { PersonalStore } from './personal/store';
 import { EvidenceRepository } from './personal/evidence';
 import { registerPersonalRoutes } from './personal/routes';
+import { resolveDataPaths, assertWritableDataDir, firstRunInit } from './config';
 
 export interface ServerInfo {
   app: FastifyInstance;
@@ -78,7 +79,13 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   registerInsightsRoutes(app, join(homedir(), '.org-engine-editor', 'state'));
 
   // Learning loop: evolution events / report / proposals (approve mutates org yaml + commits)
-  const home = process.env.ORG_ENGINE_HOME ?? join(homedir(), '.org-engine-editor');
+  // P9.1 — 数据路径统一治理：Electron 已把 ORG_ENGINE_HOME 指向 userData；
+  // 这里首次启动创建数据目录与权限说明，并拒绝把数据写进安装介质。
+  const dataPaths = resolveDataPaths();
+  assertWritableDataDir(dataPaths);
+  const firstRun = firstRunInit(dataPaths);
+  if (firstRun.created) console.log(`First run: data dir ready at ${dataPaths.userDataDir}`);
+  const home = dataPaths.userDataDir;
   // __dirname 仅存在于 CJS bundle;ESM/dev 下退回 cwd(与 validator.ts 同一守卫)
   const here = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
   const learningDir = resolveLearningDir(here, home, process.env.ORG_ENGINE_LEARNING_DIR);
@@ -87,7 +94,7 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   // Personal domain (P1.2/P1.3/P1.4): facts/rules/tasks/evidence/traces.
   // Store lives under <home>/personal/personal.sqlite (WAL), workspace-relative
   // file evidence is resolved against the configured workspace root.
-  const personalStore = new PersonalStore({ dbPath: join(home, 'personal', 'personal.sqlite') });
+  const personalStore = new PersonalStore({ dbPath: dataPaths.personalDbPath });
   const personalEvidence = new EvidenceRepository(personalStore, process.env.ORG_ENGINE_WORKSPACE ?? process.cwd());
   registerPersonalRoutes(app, { store: personalStore, evidence: personalEvidence });
 
