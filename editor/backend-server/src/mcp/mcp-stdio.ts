@@ -4,16 +4,31 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { createPersonalMcpServer, type PersonalMcpExecutor, type TracedMcpResult } from './personal-tools';
 
 const SERVER_NAME = 'org-engine-editor';
 const SERVER_VERSION = '0.1.0';
 
 interface McpOptions {
   daemonUrl: string;
+  /** P9.2 — 'org'（默认，开发者编排）或 'personal'（个人助理安全面）。 */
+  surface?: 'org' | 'personal';
+  /** personal 面的执行器注入（测试用；缺省时走 daemon HTTP）。 */
+  personalExecutor?: PersonalMcpExecutor;
 }
 
 export async function startMcpStdio(options: McpOptions): Promise<void> {
-  const { daemonUrl } = options;
+  const { daemonUrl, surface = 'org' } = options;
+
+  // P9.2 — personal 面：五个安全工具，无执行路径；执行器可注入。
+  if (surface === 'personal') {
+    const exec = options.personalExecutor ?? createHttpPersonalExecutor(daemonUrl);
+    const server = createPersonalMcpServer(exec);
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    return;
+  }
+
   const baseUrl = daemonUrl.replace(/\/+$/, '');
 
   const server = new Server(
@@ -233,6 +248,32 @@ export async function startMcpStdio(options: McpOptions): Promise<void> {
   await server.connect(transport);
 }
 
+/** 默认的 personal 执行器：把五个安全调用转发给后端 HTTP API。 */
+export function createHttpPersonalExecutor(baseUrl: string): PersonalMcpExecutor {
+  const root = baseUrl.replace(/\/+$/, '');
+  const call = async (path: string, init?: RequestInit): Promise<any> => {
+    const res = await fetch(`${root}${path}`, init);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  };
+  const wrap = (r: any): TracedMcpResult => ({
+    result: r?.result ?? r ?? {},
+    trace_id: r?.trace_id ?? null,
+    evidence_refs: r?.evidence_refs ?? [],
+  });
+  return {
+    listTasks: async () => wrap(await call('/api/v1/personal/tasks')),
+    getTask: async (_s, taskId) => wrap(await call(`/api/v1/personal/tasks/${encodeURIComponent(taskId)}`)),
+    getEvidence: async (_s, evidenceId) => wrap(await call(`/api/v1/personal/evidence/${encodeURIComponent(evidenceId)}`)),
+    simulateTask: async (_s, goal) => wrap(await call('/api/v1/personal/simulate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goal }),
+    })),
+    proposeAction: async (_s, taskId, action) => wrap(await call(`/api/v1/personal/tasks/${encodeURIComponent(taskId)}/proposals`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(action),
+    })),
+  };
+}
+
 // Only auto-start when run directly
 const isEntryPoint = process.argv[1] && (
   process.argv[1].endsWith('mcp-stdio.ts') || process.argv[1].endsWith('mcp-stdio.js')
@@ -243,7 +284,11 @@ if (isEntryPoint) {
   const daemonUrl = daemonUrlIndex !== -1 && daemonUrlIndex + 1 < args.length
     ? args[daemonUrlIndex + 1]
     : 'http://localhost:5172';
-  startMcpStdio({ daemonUrl }).catch((err) => {
+  const surfaceIndex = args.indexOf('--surface');
+  const surface = surfaceIndex !== -1 && surfaceIndex + 1 < args.length
+    ? (args[surfaceIndex + 1] as 'org' | 'personal')
+    : 'org';
+  startMcpStdio({ daemonUrl, surface }).catch((err) => {
     console.error('MCP server failed:', err);
     process.exit(1);
   });
