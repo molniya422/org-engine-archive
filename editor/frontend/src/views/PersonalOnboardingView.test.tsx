@@ -1,9 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PersonalOnboardingView } from './PersonalOnboardingView';
 import {
   PermissionSetup, ALWAYS_FORBIDDEN, PERMISSION_LABELS,
 } from '../components/personal/PermissionSetup';
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: true, version: 1 }), { status: 200 })));
+});
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('P8.1 PermissionSetup', () => {
   it('builds initial permission from exactly three choices', () => {
@@ -43,7 +49,7 @@ describe('P8.1 PersonalOnboardingView', () => {
     }
   });
 
-  it('finishing requires the local-sample rehearsal, then reports the config', () => {
+  it('finishing requires the local-sample rehearsal, then reports the config', async () => {
     const onComplete = vi.fn();
     render(<PersonalOnboardingView onComplete={onComplete} />);
     const finish = screen.getByRole('button', { name: '完成，开始使用' }) as HTMLButtonElement;
@@ -53,16 +59,26 @@ describe('P8.1 PersonalOnboardingView', () => {
     fireEvent.click(screen.getByLabelText(/本机模型/));
     fireEvent.click(screen.getByRole('button', { name: '运行本地样例演练' }));
     expect(screen.getByText(/演练完成/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText(/可生成草稿/));
 
     const finish2 = screen.getByRole('button', { name: '完成，开始使用' }) as HTMLButtonElement;
     expect(finish2.disabled).toBe(false);
     fireEvent.click(finish2);
-    expect(onComplete).toHaveBeenCalledWith({
+    await waitFor(() => expect(onComplete).toHaveBeenCalledWith({
       workspace: 'D:\\我的资料',
       model: 'local',
       privacy: 'local_only',
-      permissions: ['read_only'],
-    });
+      permissions: ['read_only', 'draft_files'],
+    }));
+
+    // 后端只认能力名：界面的 draft_files 必须以 create_draft 落库，否则 400。
+    const fetchMock = vi.mocked(globalThis.fetch);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/personal/settings');
+    expect(init?.method).toBe('PUT');
+    const body = JSON.parse(String(init?.body));
+    expect(body.permissions).toEqual(['read_only', 'create_draft']);
   });
 
   it('offers a skip path for advanced configuration', () => {

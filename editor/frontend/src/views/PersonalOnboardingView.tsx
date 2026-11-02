@@ -30,6 +30,13 @@ const MODEL_CHOICES: Array<{ id: string; label: string; note: string }> = [
 const SAMPLE_NOTE =
   '演练用一个本地样例文件夹：只读取、汇总、生成草稿，不会改动你的任何真实文件，也不会联网。';
 
+/** 界面权限键 → 后端能力名（settings API 的白名单）。 */
+const WIRE_PERMISSIONS: Record<PermissionKey, string> = {
+  read_only: 'read_only',
+  draft_files: 'create_draft',
+  set_reminders: 'create_reminder',
+};
+
 /** 演练结果直接由前端展示，不调用任何工具——纯演示首跑体验。 */
 export function PersonalOnboardingView({
   onComplete, onSkipAdvanced,
@@ -108,10 +115,29 @@ export function PersonalOnboardingView({
 
       <button
         disabled={!canFinish}
-        onClick={() => {
-          // canFinish 已含 privacy !== ''（TS 别名收窄保证此处 privacy 已定型）。
+        onClick={async () => {
           if (!canFinish) return;
-          onComplete({ workspace: workspace.trim(), model, privacy, permissions });
+          const config = {
+            workspace: workspace.trim(),
+            model,
+            privacy,
+            permissions,
+          };
+          try {
+            await fetch('/api/v1/personal/settings', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              // 后端用能力名（create_draft/create_reminder），界面用文案键
+              // （draft_files/set_reminders）；不映射会被 400 拒绝而丢设置。
+              body: JSON.stringify({
+                ...config,
+                permissions: permissions.map((p) => WIRE_PERMISSIONS[p]),
+              }),
+            });
+          } catch {
+            // 保存失败不阻断：用户仍能进入首页，但设置视为未生效。
+          }
+          onComplete(config);
         }}
       >
         完成，开始使用
