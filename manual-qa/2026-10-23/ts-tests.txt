@@ -1,0 +1,84 @@
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/claude-ecosystem/org-engine/editor/backend-server[39m
+
+ [32m✓[39m tests/personal-protocol.test.ts [2m([22m[2m18 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m tests/personal-config.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 114[2mms[22m[39m
+ [32m✓[39m tests/personal-conversation.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 174[2mms[22m[39m
+ [32m✓[39m tests/personal-store.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 314[2mms[22m[39m
+ [32m✓[39m tests/personal-model-routes.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 329[2mms[22m[39m
+ [32m✓[39m tests/run-manager.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 442[2mms[22m[39m
+ [32m✓[39m tests/personal-learning-routes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 461[2mms[22m[39m
+ [32m✓[39m tests/personal-evidence.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 137[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/personal-mcp.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 44[2mms[22m[39m
+ [32m✓[39m tests/e2e-org-workflow.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 47[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/personal-routes.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 1054[2mms[22m[39m
+   [33m[2m✓[22m[39m P1.4 personal API[2m > [22mcreates a valid fact and lists it [33m314[2mms[22m[39m
+ [32m✓[39m tests/personal-pipeline.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 1234[2mms[22m[39m
+   [33m[2m✓[22m[39m pipeline.routes → decision service contract[2m > [22msends timeout_s in seconds (not milliseconds) to /v1/execute [33m688[2mms[22m[39m
+   [33m[2m✓[22m[39m pipeline.routes → decision service contract[2m > [22mmaps verified execution to task status verified and persists evidence [33m411[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/octop-routes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 254[2mms[22m[39m
+ [32m✓[39m tests/learning-autonomy.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m tests/cors-policy.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 308[2mms[22m[39m
+ [32m✓[39m tests/org-export.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 422[2mms[22m[39m
+ [32m✓[39m tests/confirmation-routes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 207[2mms[22m[39m
+ [32m✓[39m tests/personal-rules.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 263[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/binding-resolver.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/labels.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m tests/migrate-org.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m tests/personal-schemas.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m tests/export-download-chain.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 282[2mms[22m[39m
+ [32m✓[39m tests/replay-routes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 183[2mms[22m[39m
+ [32m✓[39m tests/simulation-routes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 232[2mms[22m[39m
+ [32m✓[39m tests/task-envelope.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/eval-routes.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 240[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't3.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/insights.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+ [32m✓[39m tests/store.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 596[2mms[22m[39m
+   [33m[2m✓[22m[39m Store validation[2m > [22mrejects invalid config [33m476[2mms[22m[39m
+ [32m✓[39m tests/scanner.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 43[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/validator.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 141[2mms[22m[39m
+ [32m✓[39m tests/learning-paths.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+warning: in the working copy of 't3.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't4.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/org-config-v2.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 76[2mms[22m[39m
+ [32m✓[39m tests/adapter-client.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 199[2mms[22m[39m
+ [32m✓[39m tests/workflow-config.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 138[2mms[22m[39m
+ [32m✓[39m tests/personal-labels.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 268[2mms[22m[39m
+warning: in the working copy of 't3.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't4.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't4.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/learning-routes.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 4056[2mms[22m[39m
+   [33m[2m✓[22m[39m learning routes[2m > [22mPOST approve mutates org yaml and records a commit [33m692[2mms[22m[39m
+   [33m[2m✓[22m[39m learning revert + audit[2m > [22mPOST revert reverts an applied proposal [33m809[2mms[22m[39m
+   [33m[2m✓[22m[39m learning auto-apply[2m > [22mPOST auto-apply applies low-risk at l3 and records audit event [33m577[2mms[22m[39m
+   [33m[2m✓[22m[39m learning auto-apply[2m > [22mPOST auto-apply respects the breaker once exhausted [33m991[2mms[22m[39m
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 't.yaml', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/learning-apply.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 6183[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22madd_role adds a role and commits [33m1458[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22mrebind_skill swaps bound skill [33m1060[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22munbind_skill prunes role, and empty dept (bounds minItems 1) [33m1112[2mms[22m[39m
+   [33m[2m✓[22m[39m applyProposal[2m > [22mbump_contract increments version [33m605[2mms[22m[39m
+   [33m[2m✓[22m[39m revertProposal[2m > [22mreverts an applied proposal via git [33m793[2mms[22m[39m
+   [33m[2m✓[22m[39m revertProposal[2m > [22mrefuses to revert a stale commit (not HEAD) [33m875[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m38 passed[39m[22m[90m (38)[39m
+[2m      Tests [22m [1m[32m238 passed[39m[22m[90m (238)[39m
+[2m   Start at [22m 21:08:05
+[2m   Duration [22m 7.44s[2m (transform 2.51s, setup 0ms, collect 11.04s, tests 18.58s, environment 11ms, prepare 6.29s)[22m
+

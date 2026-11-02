@@ -1,0 +1,23 @@
+
+> org-engine-editor-frontend@0.1.0 test
+> vitest run --passWithNoTests
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mD:/claude-ecosystem/org-engine/editor/frontend[39m
+
+ [32m✓[39m src/lib/binding-check.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/views/PersonalEvalView.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[90m 57[2mms[22m[39m
+ [32m✓[39m src/components/personal/PlanPreview.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[90m 197[2mms[22m[39m
+ [32m✓[39m src/views/PersonalLearningView.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[90m 249[2mms[22m[39m
+ [32m✓[39m src/views/PersonalTaskView.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[90m 297[2mms[22m[39m
+ [32m✓[39m src/views/PersonalHomeView.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[90m 272[2mms[22m[39m
+ [32m✓[39m src/views/PersonalPrivacyRules.test.tsx [2m([22m[2m9 tests[22m[2m)[22m[90m 289[2mms[22m[39m
+ [32m✓[39m src/views/PersonalOnboardingView.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 308[2mms[22m[39m
+ [32m✓[39m src/views/PersonalApp.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[90m 298[2mms[22m[39m
+ [32m✓[39m src/components/EvolutionPanel.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[90m 192[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m10 passed[39m[22m[90m (10)[39m
+[2m      Tests [22m [1m[32m64 passed[39m[22m[90m (64)[39m
+[2m   Start at [22m 21:08:23
+[2m   Duration [22m 3.27s[2m (transform 1.22s, setup 2.08s, collect 3.73s, tests 2.16s, environment 11.11s, prepare 1.54s)[22m
+

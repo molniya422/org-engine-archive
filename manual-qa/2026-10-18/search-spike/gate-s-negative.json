@@ -1,0 +1,34 @@
+[
+ {
+  "path": "network_disabled",
+  "verdict": "deny",
+  "reason": "联网能力没有开启，无法搜索。",
+  "provider": "searchfree",
+  "query_hash": "sha256:3a2914247b3633479ac0abfd355bf34b5deffd67754a83a3a4a50082d0682db7",
+  "query_redacted": "公开问题"
+ },
+ {
+  "path": "tool_not_allowed",
+  "verdict": "deny",
+  "reason": "没有配置允许的搜索来源，无法搜索。",
+  "provider": "searchfree",
+  "query_hash": "sha256:3a2914247b3633479ac0abfd355bf34b5deffd67754a83a3a4a50082d0682db7",
+  "query_redacted": "公开问题"
+ },
+ {
+  "path": "user_reject",
+  "verdict": "needs_confirmation",
+  "reason": "需要你确认后才会把这条查询发送出去。",
+  "provider": "searchfree",
+  "query_hash": "sha256:3a2914247b3633479ac0abfd355bf34b5deffd67754a83a3a4a50082d0682db7",
+  "query_redacted": "公开问题"
+ },
+ {
+  "path": "provider_failure",
+  "verdict": "deny",
+  "reason": "搜索来源「unknown_search」不在允许列表里。",
+  "provider": "unknown_search",
+  "query_hash": "sha256:3a2914247b3633479ac0abfd355bf34b5deffd67754a83a3a4a50082d0682db7",
+  "query_redacted": "公开问题"
+ }
+]
