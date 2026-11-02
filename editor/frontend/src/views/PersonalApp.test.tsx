@@ -265,6 +265,17 @@ describe('P8.5 awaiting_confirmation is actionable, not a dead end', () => {
     expect(screen.queryByRole('button', { name: '确认执行' })).toBeNull();
   });
 
+  it('rejecting updates the home card so it no longer says awaiting confirmation', async () => {
+    mockConfirmationFlow();
+    await startTask();
+
+    fireEvent.click(await screen.findByRole('button', { name: '不执行' }));
+    await screen.findByText('没能继续');
+    fireEvent.click(screen.getByRole('button', { name: '回到首页' }));
+
+    expect(await screen.findByText('下一步：你没有执行这件事')).toBeTruthy();
+  });
+
   it('declares a confirmation point in the contract when the user opts in', async () => {
     const calls = mockConfirmationFlow();
     renderAt('/personal');

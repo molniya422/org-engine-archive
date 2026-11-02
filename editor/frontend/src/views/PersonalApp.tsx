@@ -190,6 +190,14 @@ export function PersonalApp(): React.ReactElement {
         setStatus((r.status as ExecutionStatus) ?? 'blocked');
       }
       setPending(null);
+      // 首页卡片同步决定结果，避免拒绝后仍显示"待确认"。
+      setTasks((prev) => prev.map((t) => (t.task_id === taskIdState
+        ? {
+            ...t,
+            status: decision === 'confirm' ? 'in_progress' : 'attention',
+            next_step: decision === 'confirm' ? '正在办理' : '你没有执行这件事',
+          }
+        : t)));
     } catch (e) {
       setError(describeRunError(e));
     } finally {
