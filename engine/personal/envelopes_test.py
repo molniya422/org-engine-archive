@@ -128,6 +128,51 @@ class TestContractVersioning(unittest.TestCase):
         )
 
 
+class TestNetworkPolicy(unittest.TestCase):
+    """联网策略默认关闭：旧任务缺字段 → deny，未知取值 → 报错（不静默放开）。"""
+
+    def test_missing_policy_defaults_to_deny(self):
+        from personal.envelopes import DEFAULT_NETWORK_POLICY
+
+        d = sample_task_envelope().to_dict()
+        del d["network_policy"]
+        env = TaskEnvelope.from_dict(d)
+        self.assertEqual(env.network_policy, DEFAULT_NETWORK_POLICY)
+        self.assertFalse(env.network_policy["enabled"])
+        self.assertEqual(env.network_policy["mode"], "deny")
+
+    def test_unknown_mode_is_rejected(self):
+        from personal.envelopes import normalize_network_policy
+
+        with self.assertRaises(ValueError):
+            normalize_network_policy({"mode": "allow_everything"})
+
+    def test_unknown_data_class_is_rejected(self):
+        from personal.envelopes import normalize_network_policy
+
+        with self.assertRaises(ValueError):
+            normalize_network_policy({"query_data_class": "public"})
+
+    def test_max_results_out_of_range_is_rejected(self):
+        from personal.envelopes import normalize_network_policy
+
+        for bad in (0, 51, "5", True):
+            with self.assertRaises(ValueError):
+                normalize_network_policy({"max_results": bad})
+
+    def test_explicit_policy_roundtrips(self):
+        policy = {
+            "enabled": True, "mode": "ask", "providers": ["searchfree_search"],
+            "allowed_domains": ["example.com"], "query_data_class": "redacted_local",
+            "max_results": 3, "recency": "week",
+        }
+        d = sample_task_envelope().to_dict()
+        d["network_policy"] = policy
+        env = TaskEnvelope.from_dict(d)
+        self.assertEqual(env.network_policy, policy)
+        self.assertEqual(TaskEnvelope.from_dict(env.to_dict()).network_policy, policy)
+
+
 class TestFakeAdapterRoundTrip(unittest.TestCase):
     def test_full_roundtrip_through_fake_adapter(self):
         from personal.fake_adapter import FakePersonalAdapter

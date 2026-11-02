@@ -9,14 +9,13 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from personal.canonical_json import canonical_hash_hex
 from personal.permission_gate import (
     ConfirmationTicket,
     PermissionGate,
@@ -35,17 +34,35 @@ def action(p: dict | None = None) -> CandidateAction:
     return CandidateAction(id="a1", kind="draft", risk_level="low", parameters=params(p))
 
 
-def param_hash(p: dict) -> str:
-    return hashlib.sha256(json.dumps(p, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-
-
 class TestTokenBinding(unittest.TestCase):
     def test_token_binds_task_action_and_params(self):
         tok = token_for("task_1", "a1", params())
         d = tok.to_dict()
         self.assertEqual(d["task_id"], "task_1")
         self.assertEqual(d["action_id"], "a1")
-        self.assertEqual(d["parameters_hash"], param_hash(params()))
+        self.assertEqual(d["parameters_hash"], canonical_hash_hex(params()))
+
+    def test_default_params_hash_is_a_frozen_contract(self):
+        """写死期望值：与 TS canonical-json.ts 必须逐字节一致（非自我一致）。"""
+        tok = token_for("task_1", "a1", {"path": "workspace/report.md", "content": "hi"})
+        self.assertEqual(
+            tok.parameters_hash,
+            "a8a29fc6982d8f377d0a64339dc320e8b2f94be8cf26f50fb9a007d27c7505f6",
+        )
+
+    def test_issue_confirmation_rejects_non_integer_floats(self):
+        """无法 canonical 化的参数是"不能确认"，不是内部错误（不能抛 TypeError）。"""
+        gate = PermissionGate(RuleEngine())
+        with self.assertRaises(PermissionDenied) as ctx:
+            gate.issue_confirmation("task_1", action({"path": "workspace/a.md", "size": 9.9}))
+        self.assertIn("无法确认", ctx.exception.user_message)
+
+    def test_authorize_rejects_unhashable_parameters(self):
+        gate = PermissionGate(RuleEngine())
+        tok = gate.issue_confirmation("task_1", action())
+        with self.assertRaises(PermissionDenied) as ctx:
+            gate.authorize("task_1", action({"path": "workspace/a.md", "size": 9.9}), tok.token)
+        self.assertIn("无法确认", ctx.exception.user_message)
 
     def test_modified_parameters_invalidate_token(self):
         """改参数 → hash 变 → token 失效。"""

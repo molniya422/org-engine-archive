@@ -21,12 +21,14 @@ const requireNative = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { DatabaseSync } = requireNative('node:sqlite') as typeof import('node:sqlite');
 
-export const PERSONAL_SCHEMA_VERSION = 3;
+export const PERSONAL_SCHEMA_VERSION = 5;
 
 const MIGRATIONS = [
   '001_personal.sql',
   '002_learning_signals.sql',
   '003_learning_versions.sql',
+  '004_executions.sql',
+  '005_execution_runspec.sql',
 ];
 
 export class PersonalValidationError extends Error {
@@ -47,7 +49,7 @@ export function defaultPersonalDbPath(): string {
   return join(home, 'personal', 'personal.sqlite');
 }
 
-function nowIso(): string {
+export function nowIso(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
@@ -57,7 +59,7 @@ export class PersonalStore {
   constructor(options: PersonalStoreOptions = {}) {
     const dbPath = options.dbPath ?? defaultPersonalDbPath();
     mkdirSync(dirname(dbPath), { recursive: true });
-    this.db = new DatabaseSync(dbPath);
+    this.db = new DatabaseSync(dbPath, { timeout: 5000 });
     this.db.exec('PRAGMA journal_mode = WAL;');
     this.db.exec('PRAGMA foreign_keys = ON;');
     this.migrate();
@@ -83,6 +85,13 @@ export class PersonalStore {
     // Apply migrations sequentially, stepping schema_version from `current` to
     // PERSONAL_SCHEMA_VERSION in one transaction.
     const migrationSql = MIGRATIONS
+      .filter((name) => {
+        // 005 是 ALTER TABLE：列已存在时跳过，重放不会因 duplicate column 失败。
+        if (name === '005_execution_runspec.sql') {
+          return !this.hasColumn('executions', 'run_spec');
+        }
+        return true;
+      })
       .map((name) =>
         readFileSync(
           join(dirname(fileURLToPath(import.meta.url)), 'migrations', name),
@@ -104,6 +113,12 @@ export class PersonalStore {
       this.db.exec('ROLLBACK');
       throw e;
     }
+  }
+
+  /** 列存在性检查：用于幂等地重放 ALTER TABLE 类迁移。 */
+  private hasColumn(table: string, column: string): boolean {
+    const rows = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    return rows.some((r) => r.name === column);
   }
 
   // -- audit ---------------------------------------------------------------
@@ -284,6 +299,20 @@ export class PersonalStore {
     }
   }
 
+  /**
+   * 只在版本匹配且任务未终态时更新状态；绝不改写 version。返回是否生效。
+   *
+   * 这是执行期的契约栅栏：v1 的在飞执行不能把已被用户改成 v2 的合同标成
+   * verified，也不能把 cancelled/verified 的任务复活。
+   */
+  updateTaskStatus(taskId: string, expectedVersion: number, status: string): boolean {
+    const r = this.db.prepare(`
+      UPDATE tasks SET status = ?, updated_at = ?
+      WHERE id = ? AND version = ? AND status NOT IN ('cancelled','verified')
+    `).run(status, nowIso(), taskId, expectedVersion);
+    return Number(r.changes) === 1;
+  }
+
   getTask(id: string): Record<string, unknown> | null {
     const row = this.db.prepare(`SELECT * FROM tasks WHERE id = ?`).get(id) as any;
     if (!row) return null;
@@ -297,6 +326,41 @@ export class PersonalStore {
         : this.db.prepare(`SELECT * FROM tasks ORDER BY updated_at DESC`).all()
     ) as any[];
     return rows.map((r) => ({ ...JSON.parse(r.contract), status: r.status, version: r.version, updated_at: r.updated_at }));
+  }
+
+  // -- search receipts ------------------------------------------------------
+
+  saveSearchReceipt(r: {
+    event_id: string; execution_id: string; provider: string;
+    query_hash: string; query_redacted: string;
+    results: Array<Record<string, unknown>>;
+    captured_at: string; request_hash: string; response_hash: string;
+    external_data_decision: string;
+  }): void {
+    this.db.prepare(`
+      INSERT INTO search_receipts (
+        event_id, execution_id, provider, query_hash, query_redacted,
+        results_json, captured_at, request_hash, response_hash,
+        external_data_decision, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(event_id) DO UPDATE SET
+        results_json = excluded.results_json,
+        response_hash = excluded.response_hash
+    `).run(
+      r.event_id, r.execution_id, r.provider, r.query_hash, r.query_redacted,
+      JSON.stringify(r.results), r.captured_at, r.request_hash, r.response_hash,
+      r.external_data_decision, nowIso(),
+    );
+    this.audit('system', 'search_receipt.save', 'execution', r.execution_id, {
+      provider: r.provider, decision: r.external_data_decision,
+    });
+  }
+
+  listSearchReceipts(executionId: string): Array<Record<string, unknown>> {
+    const rows = this.db
+      .prepare(`SELECT * FROM search_receipts WHERE execution_id = ? ORDER BY captured_at`)
+      .all(executionId) as any[];
+    return rows.map((r) => ({ ...r, results: JSON.parse(r.results_json) }));
   }
 
   // -- evidence ------------------------------------------------------------
@@ -342,8 +406,13 @@ export class PersonalStore {
   saveTrace(trace: Record<string, unknown>): void {
     this.db.exec('BEGIN');
     try {
+      // upsert：resume/重试复用同一 execution_id，trace id 固定，裸 INSERT 会撞 PK
+      // 让每一次已写过 trace 的恢复都永久失败。
       this.db
-        .prepare(`INSERT INTO traces (id, task_id, trace, created_at) VALUES (?, ?, ?, ?)`)
+        .prepare(`
+        INSERT INTO traces (id, task_id, trace, created_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET trace = excluded.trace, created_at = excluded.created_at
+      `)
         .run(trace.id, trace.task_id, JSON.stringify(trace), (trace as any).created_at ?? nowIso());
       this.audit('system', 'trace.save', 'decision', String(trace.id), { task_id: trace.task_id });
       this.db.exec('COMMIT');

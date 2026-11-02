@@ -7,3 +7,5 @@ release/
 *.stackdump
 .env
 .DS_Store
+.tmp-personal-*/
+editor/frontend/manual-e2e-report/

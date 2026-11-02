@@ -14,20 +14,17 @@ Chinese user_message with no internal jargon.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import secrets
 from dataclasses import dataclass, field
 from typing import Any
 
+from .canonical_json import canonical_hash_hex
 from .decision_types import CandidateAction, is_high_risk
 from .rules import RuleEngine
 
 
 def _param_hash(params: dict[str, Any]) -> str:
-    return hashlib.sha256(
-        json.dumps(params, sort_keys=True, ensure_ascii=False).encode()
-    ).hexdigest()
+    return canonical_hash_hex(params)
 
 
 @dataclass(frozen=True)
@@ -80,7 +77,15 @@ class PermissionGate:
     # -- token lifecycle ------------------------------------------------------
 
     def issue_confirmation(self, task_id: str, action: CandidateAction) -> ConfirmationTicket:
-        tok = token_for(task_id, action.id, action.parameters)
+        try:
+            tok = token_for(task_id, action.id, action.parameters)
+        except TypeError as e:
+            # 参数含无法 canonical 化的数值（非整数浮点等）：这是"不能确认"，
+            # 不是内部错误。转成用户可读的拒绝，避免整个 HITL turn 500。
+            raise PermissionDenied(
+                user_message="这个操作的参数包含无法确认的数值，已拒绝。",
+                detail=str(e),
+            ) from e
         self._open_tokens[tok.token] = tok
         return tok
 
@@ -140,7 +145,15 @@ class PermissionGate:
                     user_message="这条确认对应的是另一个操作，请重新确认。",
                     detail=f"token bound to {ticket.task_id}/{ticket.action_id}",
                 )
-            if ticket.parameters_hash != _param_hash(action.parameters):
+            try:
+                current_hash = _param_hash(action.parameters)
+            except TypeError as e:
+                # 同上：参数无法 canonical 化 → 拒绝这次确认，而不是抛 500。
+                raise PermissionDenied(
+                    user_message="这个操作的参数包含无法确认的数值，已拒绝。",
+                    detail=str(e),
+                ) from e
+            if ticket.parameters_hash != current_hash:
                 raise PermissionDenied(
                     user_message="操作内容在确认后发生了变化，请重新确认。",
                     detail="parameters_hash mismatch — token invalidated",

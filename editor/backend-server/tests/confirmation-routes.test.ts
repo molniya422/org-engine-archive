@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import Fastify from 'fastify';
 import { registerConfirmationRoutes, ConfirmationGate } from '../src/personal/confirmation.routes';
+import { canonicalHashHex } from '../src/personal/canonical-json';
 
 function gateWithToken() {
   const gate = new ConfirmationGate();
@@ -18,9 +19,41 @@ describe('P5.2 confirmation routes (TS mirror)', () => {
     });
     const body = res.json();
     expect(res.statusCode).toBe(201);
-    expect(body.token).toMatch(/^tok_/);
+    expect(body.token).toMatch(/^tok_[0-9a-f]{32}$/);
     expect(body.parameters_hash).toHaveLength(64);
     app.close();
+  });
+
+  it('rejects non-object parameters with 400', async () => {
+    const app = Fastify({ logger: false });
+    registerConfirmationRoutes(app, new ConfirmationGate());
+    for (const parameters of ['not-an-object', [1, 2], 42]) {
+      const res = await app.inject({
+        method: 'POST', url: '/api/v1/personal/confirmations',
+        payload: { task_id: 'task_1', action_id: 'a1', parameters },
+      });
+      expect(res.statusCode).toBe(400);
+    }
+    app.close();
+  });
+
+  it('returns 400 (not 500) when parameters contain a non-integer float', async () => {
+    const app = Fastify({ logger: false });
+    registerConfirmationRoutes(app, new ConfirmationGate());
+    const res = await app.inject({
+      method: 'POST', url: '/api/v1/personal/confirmations',
+      payload: { task_id: 'task_1', action_id: 'a1', parameters: { size: 9.9 } },
+    });
+    expect(res.statusCode).toBe(400);
+    app.close();
+  });
+
+  it('binds the canonical hash of the parameters', () => {
+    // 与 Python permission_gate._param_hash 必须同源；否则跨语言 token 永远校验失败。
+    const gate = new ConfirmationGate();
+    const ticket = gate.issue('task_1', 'a1', { path: '/inbox/a.md', content: 'x' });
+    expect(ticket.parameters_hash)
+      .toBe(canonicalHashHex({ content: 'x', path: '/inbox/a.md' }));
   });
 
   it('authorizes once then rejects replay', async () => {

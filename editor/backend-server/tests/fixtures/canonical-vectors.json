@@ -1,0 +1,47 @@
+{
+  "algorithm": "sorted keys (Unicode code points), compact separators, UTF-8, arrays preserve order, integer-valued numbers only (1.0 normalizes to 1), well-formed strings only",
+  "vectors": [
+    {
+      "name": "nested_reordered_keys",
+      "value": { "b": 1, "a": { "d": [1, 2, 3], "c": "中文" } },
+      "canonical": "{\"a\":{\"c\":\"中文\",\"d\":[1,2,3]},\"b\":1}",
+      "sha256": "sha256:e1fe81739fd72b36e8b6373b43f28c4b13f6f07d3d2748f6d65b244c466c62ba"
+    },
+    {
+      "name": "nulls_and_bools",
+      "value": { "z": null, "y": true, "x": false },
+      "canonical": "{\"x\":false,\"y\":true,\"z\":null}",
+      "sha256": "sha256:96863807d47ca318a0f24f1ead2865e38e0069a5b3c118fd8127348d226d3bb2"
+    },
+    {
+      "name": "arrays_preserve_order",
+      "value": { "list": [3, 1, 2], "empty": [] },
+      "canonical": "{\"empty\":[],\"list\":[3,1,2]}",
+      "sha256": "sha256:82bd8bdd6da02bf1da4c1d85ec62cd22c0a9149ebd90f0d6e9208aa9e2027474"
+    },
+    {
+      "name": "unicode_and_escapes",
+      "value": { "text": "他说\"好\"\n换行", "emoji": "🚀" },
+      "canonical": "{\"emoji\":\"🚀\",\"text\":\"他说\\\"好\\\"\\n换行\"}",
+      "sha256": "sha256:adbe18b40ffcb3b7c8507678e106138848973abdcaf040b171a42aafaa86b748"
+    },
+    {
+      "name": "empty_object",
+      "value": {},
+      "canonical": "{}",
+      "sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "name": "astral_key_order",
+      "value": { "🚀": 1, "Ａ": 2, "a": 3 },
+      "canonical": "{\"a\":3,\"Ａ\":2,\"🚀\":1}",
+      "sha256": "sha256:229e08a4283b6d2d615177f414b717d4f59ed09cb0f0352590ba0f7cef21f4a1"
+    },
+    {
+      "name": "integer_valued_float",
+      "value": { "n": 1.0 },
+      "canonical": "{\"n\":1}",
+      "sha256": "sha256:2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd"
+    }
+  ]
+}

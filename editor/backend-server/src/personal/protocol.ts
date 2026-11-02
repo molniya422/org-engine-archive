@@ -225,9 +225,9 @@ export function protocolVersion(): string {
 // ---------------------------------------------------------------------------
 
 function contentHash(receipt: OctopToolReceipt): string {
-  // Canonical form: recursively sorted keys, compact separators, raw UTF-8.
-  // Python twin uses json.dumps(..., sort_keys=True, separators=(",", ":"),
-  // ensure_ascii=False) so hashes match for the same receipt.
+  // 注意：这里用 UTF-16 排序 + 默认分隔符，与 canonical-json.ts 的码点排序不同。
+  // 当前证据哈希不参与跨语言校验，因此暂不统一；若未来要让证据哈希跨语言可比，
+  // 必须迁移到 canonicalJson。
   const canonical = stableStringify({
     event_id: receipt.event_id,
     is_error: receipt.is_error,

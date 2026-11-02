@@ -9,8 +9,9 @@
  * Python RuleEngine/permission gate — this surface only manages the
  * confirmation token lifecycle the frontend interacts with.
  */
-import { createHash } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { FastifyInstance } from 'fastify';
+import { canonicalHashHex } from './canonical-json';
 
 export interface ConfirmationTicket {
   token: string;
@@ -20,14 +21,21 @@ export interface ConfirmationTicket {
 }
 
 function paramHash(params: Record<string, unknown>): string {
-  return createHash('sha256').update(JSON.stringify(params)).digest('hex');
+  return canonicalHashHex(params);
+}
+
+/** JSON 对象才允许作为参数；string/array/null 一律拒绝（400），不猜。 */
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
 }
 
 export class ConfirmationGate {
   private open = new Map<string, ConfirmationTicket>();
 
   issue(task_id: string, action_id: string, parameters: Record<string, unknown>): ConfirmationTicket {
-    const token = `tok_${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`;
+    const token = `tok_${randomBytes(16).toString('hex')}`;
     const ticket: ConfirmationTicket = {
       token, task_id, action_id, parameters_hash: paramHash(parameters),
     };
@@ -68,8 +76,21 @@ export function registerConfirmationRoutes(app: FastifyInstance, gate: Confirmat
       reply.code(400);
       return { error: 'task_id and action_id required' };
     }
-    const ticket = gate.issue(String(task_id), String(action_id), parameters ?? {});
-    return reply.code(201).send(ticket);
+    if (parameters !== undefined && !isPlainObject(parameters)) {
+      reply.code(400);
+      return { error: 'parameters must be a JSON object' };
+    }
+    try {
+      const ticket = gate.issue(String(task_id), String(action_id), parameters ?? {});
+      return reply.code(201).send(ticket);
+    } catch (e) {
+      // 参数含无法 canonical 化的值（如非整数浮点）：客户端错误，不是 500。
+      if (e instanceof TypeError) {
+        reply.code(400);
+        return { error: 'parameters contain values that cannot be confirmed' };
+      }
+      throw e;
+    }
   });
 
   app.post('/api/v1/personal/confirmations/authorize', async (req, reply) => {
@@ -78,7 +99,20 @@ export function registerConfirmationRoutes(app: FastifyInstance, gate: Confirmat
       reply.code(400);
       return { error: 'token, task_id and action_id required' };
     }
-    const result = gate.authorize(String(token), String(task_id), String(action_id), parameters ?? {});
+    if (parameters !== undefined && !isPlainObject(parameters)) {
+      reply.code(400);
+      return { error: 'parameters must be a JSON object' };
+    }
+    let result: { allowed: boolean; error?: string };
+    try {
+      result = gate.authorize(String(token), String(task_id), String(action_id), parameters ?? {});
+    } catch (e) {
+      if (e instanceof TypeError) {
+        reply.code(400);
+        return { error: 'parameters contain values that cannot be confirmed' };
+      }
+      throw e;
+    }
     if (!result.allowed) {
       reply.code(403);
       return { error: result.error, recoverable: true, needs_reconfirmation: true };

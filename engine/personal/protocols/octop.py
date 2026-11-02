@@ -162,9 +162,10 @@ def protocol_version() -> str:
 
 
 def _content_hash(receipt: ToolReceipt) -> str:
-    # Canonical form: sorted keys (recursive), compact separators, raw UTF-8.
-    # The TypeScript twin uses stableStringify() with the same key order so
-    # hashes match for the same receipt across both implementations.
+    # 注意：这里用 Python sorted() + 紧凑分隔符，与 canonical_json.py 的规则
+    # 接近但不等价（TS 侧 stableStringify 用 UTF-16 排序）。当前证据哈希
+    # 不参与跨语言校验，因此暂不统一；若未来要让证据哈希跨语言可比，
+    # 必须迁移到 canonical_json。
     canonical = json.dumps(
         {
             "event_id": receipt.event_id,

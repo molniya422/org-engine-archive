@@ -25,6 +25,58 @@ REQUIRED_TASK_FIELDS = (
 
 VERIFICATION_STATUSES = frozenset({"verified", "failed", "incomplete", "unverifiable"})
 
+# 联网策略：默认关闭。旧任务不带该字段时必须继承"禁止"，绝不能因为新代码
+# 默认值变化而让历史任务获得联网能力。
+NETWORK_MODES = frozenset({"deny", "ask", "allow"})
+QUERY_DATA_CLASSES = frozenset({"public_only", "redacted_local", "private_forbidden"})
+
+DEFAULT_NETWORK_POLICY: dict[str, Any] = {
+    "enabled": False,
+    "mode": "deny",
+    "providers": [],
+    "allowed_domains": [],
+    "query_data_class": "public_only",
+    "max_results": 5,
+    "recency": None,
+}
+
+
+def normalize_network_policy(raw: Any) -> dict[str, Any]:
+    """校验并规范化 network_policy；缺省 → 默认拒绝。
+
+    未知 mode/data_class 直接 ValueError（不静默降级成"允许"）。
+    """
+    if raw is None:
+        return dict(DEFAULT_NETWORK_POLICY)
+    if not isinstance(raw, dict):
+        raise ValueError("network_policy must be an object")
+    mode = raw.get("mode", "deny")
+    if mode not in NETWORK_MODES:
+        raise ValueError(f"network_policy.mode must be one of {sorted(NETWORK_MODES)}, got {mode!r}")
+    data_class = raw.get("query_data_class", "public_only")
+    if data_class not in QUERY_DATA_CLASSES:
+        raise ValueError(
+            f"network_policy.query_data_class must be one of {sorted(QUERY_DATA_CLASSES)}, got {data_class!r}"
+        )
+    providers = raw.get("providers", [])
+    domains = raw.get("allowed_domains", [])
+    if not isinstance(providers, list) or not all(isinstance(p, str) for p in providers):
+        raise ValueError("network_policy.providers must be a list of strings")
+    if not isinstance(domains, list) or not all(isinstance(d, str) for d in domains):
+        raise ValueError("network_policy.allowed_domains must be a list of strings")
+    max_results = raw.get("max_results", 5)
+    if not isinstance(max_results, int) or isinstance(max_results, bool) or not 1 <= max_results <= 50:
+        raise ValueError("network_policy.max_results must be an integer in 1..50")
+    return {
+        "enabled": bool(raw.get("enabled", False)),
+        "mode": mode,
+        "providers": list(providers),
+        "allowed_domains": list(domains),
+        "query_data_class": data_class,
+        "max_results": max_results,
+        "recency": raw.get("recency"),
+    }
+
 
 def bump_contract_version(task_dict: dict[str, Any]) -> int:
     """用户修改条件 → 合同版本 +1 → 受影响计划重新进入判断流程。"""
@@ -50,6 +102,9 @@ class TaskEnvelope:
     budget: dict[str, Any] = field(default_factory=dict)
     allowed_scopes: tuple[str, ...] = ()
     forbidden_actions: tuple[str, ...] = ()
+    # 合同里用户声明的确认点：非空即要求执行前先确认（即使候选只是低风险草稿）。
+    confirmation_points: tuple[dict[str, Any], ...] = ()
+    network_policy: dict[str, Any] = field(default_factory=lambda: dict(DEFAULT_NETWORK_POLICY))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -65,6 +120,8 @@ class TaskEnvelope:
             "budget": self.budget,
             "allowed_scopes": list(self.allowed_scopes),
             "forbidden_actions": list(self.forbidden_actions),
+            "confirmation_points": [dict(p) for p in self.confirmation_points],
+            "network_policy": normalize_network_policy(self.network_policy),
         }
 
     @classmethod
@@ -85,6 +142,8 @@ class TaskEnvelope:
             budget=dict(d["budget"]),
             allowed_scopes=tuple(d.get("allowed_scopes", ())),
             forbidden_actions=tuple(d.get("forbidden_actions", ())),
+            confirmation_points=tuple(dict(p) for p in d.get("confirmation_points", ())),
+            network_policy=normalize_network_policy(d.get("network_policy")),
         )
 
 
@@ -102,6 +161,7 @@ class PlanEnvelope:
     missing_information: list[str] = field(default_factory=list)
     rule_refs: list[str] = field(default_factory=list)
     requires_confirmation: bool = False
+    network_policy: dict[str, Any] = field(default_factory=lambda: dict(DEFAULT_NETWORK_POLICY))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -116,6 +176,7 @@ class PlanEnvelope:
             "missing_information": list(self.missing_information),
             "rule_refs": list(self.rule_refs),
             "requires_confirmation": self.requires_confirmation,
+            "network_policy": normalize_network_policy(self.network_policy),
         }
 
     @classmethod
@@ -144,6 +205,7 @@ class PlanEnvelope:
             missing_information=list(d.get("missing_information", [])),
             rule_refs=list(d.get("rule_refs", [])),
             requires_confirmation=bool(d.get("requires_confirmation", False)),
+            network_policy=normalize_network_policy(d.get("network_policy")),
         )
 
 

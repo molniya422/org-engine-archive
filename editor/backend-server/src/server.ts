@@ -24,8 +24,20 @@ import { OrchestratorClient } from './orchestrator-adapter/client';
 import { RunManager } from './run-manager/manager';
 import { RunPersistence } from './run-manager/persistence';
 import { PersonalStore } from './personal/store';
+import { ExecutionStore } from './personal/executions';
 import { EvidenceRepository } from './personal/evidence';
 import { registerPersonalRoutes } from './personal/routes';
+import { registerSettingsRoutes } from './personal/settings.routes';
+import { registerPipelineRoutes } from './personal/pipeline.routes';
+import { registerEvalRoutes } from './personal/eval.routes';
+import { registerReplayRoutes } from './personal/replay.routes';
+import { registerSimulationRoutes } from './personal/simulation.routes';
+import { registerRuleEngineRoutes } from './personal/rule.routes';
+import { registerModelRoutes } from './personal/model.routes';
+import { registerLearningRoutes } from './personal/learning.routes';
+import { serviceExecutorAdapters } from './personal/service-client';
+import { checkReadiness } from './personal/route-guard';
+import { registerConfirmationRoutes, ConfirmationGate } from './personal/confirmation.routes';
 import { resolveDataPaths, assertWritableDataDir, firstRunInit } from './config';
 
 export interface ServerInfo {
@@ -95,8 +107,83 @@ export async function startServer(port?: number): Promise<ServerInfo> {
   // Store lives under <home>/personal/personal.sqlite (WAL), workspace-relative
   // file evidence is resolved against the configured workspace root.
   const personalStore = new PersonalStore({ dbPath: dataPaths.personalDbPath });
+  const executionStore = new ExecutionStore(personalStore);
+  const recovered = executionStore.recoverExpired();
+  if (recovered.length > 0) {
+    console.log(`Recovered ${recovered.length} expired execution(s) -> recoverable`);
+  }
+  // 周期扫描：进程内已有心跳续租，这里只会捞到真正断掉的执行
+  // （心跳停了 = 该 owner 的进程不在了）。unref 不阻止进程退出。
+  const recoveryTimer = setInterval(() => {
+    try {
+      const rows = executionStore.recoverExpired();
+      if (rows.length > 0) {
+        console.log(`Recovered ${rows.length} expired execution(s) -> recoverable`);
+      }
+    } catch (e) {
+      console.error('execution recovery sweep failed', e);
+    }
+  }, 60_000);
+  recoveryTimer.unref?.();
   const personalEvidence = new EvidenceRepository(personalStore, process.env.ORG_ENGINE_WORKSPACE ?? process.cwd());
   registerPersonalRoutes(app, { store: personalStore, evidence: personalEvidence });
+  registerSettingsRoutes(app, { store: personalStore });
+
+  // P4.4 阶段二 — 确认令牌门禁 + 管线编排（经 Python decision service 驱动 Octop）。
+  // Octop 配置缺失时管线返回 503 octop_not_configured，功能显式降级不静默。
+  registerConfirmationRoutes(app, new ConfirmationGate());
+  const octopBase = process.env.OCTOP_BASE_URL?.trim();
+  const octopWorkspace = process.env.OCTOP_WORKSPACE_ROOT?.trim();
+  const personalServiceUrl = process.env.PERSONAL_SERVICE_URL?.trim() || 'http://127.0.0.1:5174';
+  registerPipelineRoutes(app, {
+    store: personalStore,
+    serviceUrl: personalServiceUrl,
+    executions: executionStore,
+    octop:
+      octopBase && octopWorkspace && process.env.OCTOP_PASSWORD
+        ? {
+            base_url: octopBase,
+            username: process.env.OCTOP_USERNAME ?? 'admin',
+            password: process.env.OCTOP_PASSWORD,
+            agent_name: process.env.OCTOP_AGENT_NAME ?? 'personal',
+            workspace_root: octopWorkspace,
+            allow_remote: process.env.OCTOP_ALLOW_REMOTE === '1',
+          }
+        : null,
+  });
+
+  // 启动就绪检查：依赖不可用时立刻告警，避免"启动了但用不了"。
+  const octopForReadiness = octopBase && octopWorkspace && process.env.OCTOP_PASSWORD
+    ? {
+        base_url: octopBase,
+        username: process.env.OCTOP_USERNAME ?? 'admin',
+        password: process.env.OCTOP_PASSWORD,
+        agent_name: process.env.OCTOP_AGENT_NAME ?? 'personal',
+        workspace_root: octopWorkspace,
+      }
+    : null;
+  const readiness = await checkReadiness({
+    serviceUrl: personalServiceUrl,
+    octop: octopForReadiness,
+  });
+  if (!readiness.ready) {
+    console.warn(`[personal] ${readiness.reason}`);
+    for (const [name, c] of Object.entries(readiness.checks)) {
+      if (!c.ok) console.warn(`  - ${name}: ${c.detail}`);
+    }
+  }
+  app.get('/api/v1/personal/readiness', async () => readiness);
+
+  // -- 个人决策层的只读/模拟/学习端点 -------------------------------------
+  // 这些模块早已实现并有单测，但此前从未挂载（server.ts 没有 import），
+  // 导致 /eval /replay /simulate /rules/:id/check /model/health /learning/* 全部 404。
+  const serviceExecutors = serviceExecutorAdapters(personalServiceUrl);
+  registerEvalRoutes(app, serviceExecutors.eval);
+  registerReplayRoutes(app, serviceExecutors.replay);
+  registerSimulationRoutes(app, serviceExecutors.simulate);
+  registerRuleEngineRoutes(app, personalStore);
+  registerModelRoutes(app);
+  registerLearningRoutes(app, { store: personalStore });
 
   // Expose store to health route via app decorator (typed)
   (app as any)._orgStore = store;
